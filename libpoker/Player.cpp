@@ -32,4 +32,7 @@ Player::Player()
 	last_action = Player::None;
 	sitout = false;
     wanna_leave = false;
+
+    table_no = -1;
+    seat_no = -1;
 }

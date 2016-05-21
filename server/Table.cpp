@@ -107,206 +107,201 @@ unsigned int Table::countActivePlayers()
 }
 
 // remove a player from table seats when player calls game.leavegame
-unsigned int Table::removePlayer(Player *p)
+unsigned int Table::removePlayer(int seat_no)
 {
-    unsigned int pos = -1;
-	for (unsigned int i=0; i < 10; i++)
-	{
-		if (seats[i].occupied && seats[i].player->getClientId() == p->getClientId()) {
-            seats[i].occupied = false;
-            seats[i].player = NULL;
-            seats[i].in_round = false;
+    if (seat_no != -1) {
+        seats[seat_no].occupied = false;
+        seats[seat_no].player = NULL;
+        seats[seat_no].in_round = false;
+        return seat_no;
+    }
 
-            return seats[i].seat_no;
-        }
-	}
-	
-	return pos;
+    return seat_no;
 }
 
 // all (or except one) players are allin
 bool Table::isAllin()
 {
-	unsigned int count = 0;
-	unsigned int active_players = 0;
-	
-	for (unsigned int i=0; i < 10; i++)
-	{
-		if (seats[i].occupied && seats[i].in_round)
-		{
-			active_players++;
-			
-			Player *p = seats[i].player;
-			
-			if (p->getStake() == 0)
-				count++;
-		}
-	}
-	
-	return (count >= active_players - 1);
+    unsigned int count = 0;
+    unsigned int active_players = 0;
+
+    for (unsigned int i=0; i < 10; i++)
+    {
+        if (seats[i].occupied && seats[i].in_round)
+        {
+            active_players++;
+
+            Player *p = seats[i].player;
+
+            if (p->getStake() == 0)
+                count++;
+        }
+    }
+
+    return (count >= active_players - 1);
 }
 
 bool Table::isSeatInvolvedInPot(Pot *pot, unsigned int s)
 {
-	for (unsigned int i=0; i < pot->vseats.size(); i++)
-	{
-		if (pot->vseats[i] == s)
-			return true;
-	}
-	
-	return false;
+    for (unsigned int i=0; i < pot->vseats.size(); i++)
+    {
+        if (pot->vseats[i] == s)
+            return true;
+    }
+
+    return false;
 }
 
 unsigned int Table::getInvolvedInPotCount(Pot *pot, std::vector<HandStrength> &wl)
 {
-	unsigned int involved_count = 0;
-	
-	for (unsigned int i=0; i < pot->vseats.size(); i++)
-	{
-		const unsigned int s = pot->vseats[i];
-		
-		for (unsigned int j=0; j < wl.size(); j++)
-		{
-			if ((unsigned int) wl[j].getId() == s)
-				involved_count++;
-		}
-	}
-	
-	return involved_count;
+    unsigned int involved_count = 0;
+
+    for (unsigned int i=0; i < pot->vseats.size(); i++)
+    {
+        const unsigned int s = pot->vseats[i];
+
+        for (unsigned int j=0; j < wl.size(); j++)
+        {
+            if ((unsigned int) wl[j].getId() == s)
+                involved_count++;
+        }
+    }
+
+    return involved_count;
 }
 
 void Table::collectBets()
 {
-	do
-	{
-		// find smallest bet
-		chips_type smallest_bet = 0;
-		bool need_sidepot = false;
-		
-		for (unsigned int i=0; i < 10; i++)
-		{
-			// skip folded and already handled players
-			if (!seats[i].occupied || !seats[i].in_round || seats[i].bet == 0)
-				continue;
-			
-			if (smallest_bet == 0)   // set an initial value
-				smallest_bet = seats[i].bet;
-			else if (seats[i].bet < smallest_bet)  // new smallest bet
-			{
-				smallest_bet = seats[i].bet;
-				need_sidepot = true;
-			}
-			else if (seats[i].bet > smallest_bet)  // bets are not equal,
-				need_sidepot = true;           // so there must be a smallest bet
-		}
-		
-		
-#if 0
-		log_msg("collectBets", "smallest_bet: sidepot=%s with %d", 
-			need_sidepot ? "true" : "false", smallest_bet);
-#endif
-		// there are no bets, do nothing
-		if (smallest_bet == 0)
-			return;
-		
-		
-		// last pot is current pot
-		Pot *cur_pot = &(pots[pots.size() - 1]);
-		
-		// if current pot is final, create a new one
-		if (cur_pot->final)
-		{
-			Pot pot;
-			pot.amount = 0;
-			pot.final = false;
-			pots.push_back(pot);
-			
-			cur_pot = &(pots[pots.size() - 1]);
-		}
-		
-		
-		// collect the bet of each player
-		for (unsigned int i=0; i < 10; i++)
-		{
-			// skip invalid seats
-			if (!seats[i].occupied)
-				continue;
-			
-			// skip already handled players
-			if (seats[i].bet == 0)
-				continue;
-			
-			// collect bet of folded players and skip them
-			if (!seats[i].in_round)
-			{
-				cur_pot->amount += seats[i].bet;
-				seats[i].bet = 0;
-				continue;
-			}
-			
-			// collect the bet into pot
-			if (!need_sidepot)
-			{
-				cur_pot->amount += seats[i].bet;
-				seats[i].bet = 0;
-			}
-			else
-			{
-				cur_pot->amount += smallest_bet;
-				seats[i].bet -= smallest_bet;
-			}
-			
-			// mark pot as final if at least one player is allin
-			Player *p = seats[i].player;
-			if (p->getStake() == 0)
-				cur_pot->final = true;
-			
-			// set player 'involved in pot'
-			if (!isSeatInvolvedInPot(cur_pot, i))
-				cur_pot->vseats.push_back(i);
-		}
-		
-		
-		if (!need_sidepot)  // all player bets are the same, end here
-			break;
-		
-	} while (true);
+    do
+    {
+        // find smallest bet
+        chips_type smallest_bet = 0;
+        bool need_sidepot = false;
+
+        for (unsigned int i=0; i < 10; i++)
+        {
+            // skip folded and already handled players
+            if (!seats[i].occupied || !seats[i].in_round || seats[i].bet == 0)
+                continue;
+
+            if (smallest_bet == 0)   // set an initial value
+                smallest_bet = seats[i].bet;
+            else if (seats[i].bet < smallest_bet)  // new smallest bet
+            {
+                smallest_bet = seats[i].bet;
+                need_sidepot = true;
+            }
+            else if (seats[i].bet > smallest_bet)  // bets are not equal,
+                need_sidepot = true;           // so there must be a smallest bet
+        }
+
 
 #if 0
-	for (unsigned int i=0; i < pots.size(); i++)
-	{
-		log_msg("pot", "#%d: amount=%0.2f players=%d",
-			i+1, pots[i].amount, (int)pots[i].players.size());
-		
-		for (unsigned int j=0; j < pots[i].players.size(); j++)
-		{
-			Player *p = pots[i].players[j];
-			log_msg("pot", "    player %d", p->getClientId());
-		}
-	}
-	
-	for (unsigned int i=0; i < seats.size(); i++)
-	{
-		log_msg("seat-bets", "seat-%d: %.2f", i, seats[i].bet);
-	}
+        log_msg("collectBets", "smallest_bet: sidepot=%s with %d", 
+                need_sidepot ? "true" : "false", smallest_bet);
+#endif
+        // there are no bets, do nothing
+        if (smallest_bet == 0)
+            return;
+
+
+        // last pot is current pot
+        Pot *cur_pot = &(pots[pots.size() - 1]);
+
+        // if current pot is final, create a new one
+        if (cur_pot->final)
+        {
+            Pot pot;
+            pot.amount = 0;
+            pot.final = false;
+            pots.push_back(pot);
+
+            cur_pot = &(pots[pots.size() - 1]);
+        }
+
+
+        // collect the bet of each player
+        for (unsigned int i=0; i < 10; i++)
+        {
+            // skip invalid seats
+            if (!seats[i].occupied)
+                continue;
+
+            // skip already handled players
+            if (seats[i].bet == 0)
+                continue;
+
+            // collect bet of folded players and skip them
+            if (!seats[i].in_round)
+            {
+                cur_pot->amount += seats[i].bet;
+                seats[i].bet = 0;
+                continue;
+            }
+
+            // collect the bet into pot
+            if (!need_sidepot)
+            {
+                cur_pot->amount += seats[i].bet;
+                seats[i].bet = 0;
+            }
+            else
+            {
+                cur_pot->amount += smallest_bet;
+                seats[i].bet -= smallest_bet;
+            }
+
+            // mark pot as final if at least one player is allin
+            Player *p = seats[i].player;
+            if (p->getStake() == 0)
+                cur_pot->final = true;
+
+            // set player 'involved in pot'
+            if (!isSeatInvolvedInPot(cur_pot, i))
+                cur_pot->vseats.push_back(i);
+        }
+
+
+        if (!need_sidepot)  // all player bets are the same, end here
+            break;
+
+    } while (true);
+
+#if 0
+    for (unsigned int i=0; i < pots.size(); i++)
+    {
+        log_msg("pot", "#%d: amount=%0.2f players=%d",
+                i+1, pots[i].amount, (int)pots[i].players.size());
+
+        for (unsigned int j=0; j < pots[i].players.size(); j++)
+        {
+            Player *p = pots[i].players[j];
+            log_msg("pot", "    player %d", p->getClientId());
+        }
+    }
+
+    for (unsigned int i=0; i < seats.size(); i++)
+    {
+        log_msg("seat-bets", "seat-%d: %.2f", i, seats[i].bet);
+    }
 #endif
 }
 
 void Table::resetLastPlayerActions()
 {
-	// reset last-player action
-	for (unsigned int i = 0; i < 10; i++)
-	{
-		if (!seats[i].occupied)
-			continue;
-		
-		seats[i].player->resetLastAction();
-	}
+    // reset last-player action
+    for (unsigned int i = 0; i < 10; i++)
+    {
+        if (!seats[i].occupied)
+            continue;
+
+        seats[i].player->resetLastAction();
+    }
 }
 
 void Table::scheduleState(State sched_state, unsigned int delay_sec)
 {
-	state = sched_state;
-	delay = delay_sec;
-	delay_start = time(NULL);
+    state = sched_state;
+    delay = delay_sec;
+    delay_start = time(NULL);
 }

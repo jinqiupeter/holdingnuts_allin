@@ -687,14 +687,13 @@ bool send_playerlist(int gid, clientcon *client)
 	if (!g)
 		return false;
 	
-	vector<int> client_list;
+	vector<string> client_list;
 	g->getPlayerList(client_list);
 	
 	string slist;
 	for (unsigned int i=0; i < client_list.size(); i++)
 	{
-		snprintf(msg, sizeof(msg), "%d ", client_list[i]);
-		slist += msg;
+		slist += client_list[i];
 	}
 	
 	snprintf(msg, sizeof(msg), "PLAYERLIST %d %s", gid, slist.c_str());
@@ -871,6 +870,13 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 		t >> passwd;
 	
 	GameController *g = get_game_by_id(gid);
+	log_msg("game ", "registering user %d to game %d", client->id, gid);
+    vector<int> player_list;
+    g->getPlayerList(player_list);
+    for (vector<int>::iterator e1 = player_list.begin(); e1 != player_list.end(); e1++) {
+        log_msg("game ", " found player %d for game %d", *e1, gid);
+    }
+
 	if (!g)
 	{
 		send_err(client, 0 /*FIXME*/, "game does not exist");

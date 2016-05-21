@@ -25,6 +25,7 @@
 #define _GAMECONTROLLER_H
 
 #include <vector>
+#include <string>
 #include <map>
 #include <set>
 #include <string>
@@ -55,6 +56,15 @@ public:
 		FreezeOut,  // Tournament
 		SNG         // Sit'n'Go
 	} GameType;
+
+	typedef enum {
+        Created = 0x00,
+		Started = 0x01,  
+		Paused  = 0x02,  
+		Ended   = 0x03,
+        Expired = 0x04,
+        Finished= 0x05
+	} GameStatus;
 	
 	
 	typedef enum {
@@ -82,6 +92,9 @@ public:
 	GameType getGameType() const { return type; };
     void setGameType(GameType game_type) { type = game_type; };
 	
+	GameStatus getGameStatus() const { return status; };
+    void setGameType(GameStatus game_status) { status = game_status; };
+
 	void setPlayerTimeout(unsigned int respite) { timeout = respite; };
 	unsigned int getPlayerTimeout() const { return timeout; };
 	
@@ -108,6 +121,7 @@ public:
 	unsigned int getPlayerCount() const { return players.size(); };
 	
 	bool getPlayerList(std::vector<int> &client_list) const;
+	bool getPlayerList(std::vector<std::string> &client_list) const;
 	bool getListenerList(std::vector<int> &client_list) const;
 	void getFinishList(std::vector<Player*> &player_list) const;
 	
@@ -117,13 +131,14 @@ public:
     void setExpireIn(int iExpireIn) { expire_in = iExpireIn; };
     int getExpireIn() const { return expire_in; };
 	
-	bool isStarted() const { return started; };
-	bool isPaused() const { return paused; };
-	bool isEnded() const { return ended; };
+	bool isStarted() const { return status == Started; };
+	bool isPaused() const { return status == Paused; };
+	bool isEnded() const { return status == Ended; };
 	
-	bool isFinished() const { return finished; };
-	void setFinished() { finished = true; };
+	bool isFinished() const { return status == Finished; };
+	void setFinished() { status = Finished; };
 	
+    bool arrangeSeat(int cid);
 	bool addPlayer(int cid, const std::string &uuid);
 	bool removePlayer(int cid);
 	bool isPlayer(int cid) const;
@@ -186,12 +201,12 @@ protected:
 private:
 	int game_id;
 	
-	bool started;
     time_t started_time;
     bool paused;
 	unsigned int max_players;
 	
 	GameType type;
+    GameStatus status;
 	LimitRule limit;
 	chips_type player_stakes;
 	unsigned int timeout;
@@ -214,13 +229,10 @@ private:
 	int owner;   // owner of a game
 	bool restart;   // should be restarted when ended?
 	
-	bool ended;
 	time_t ended_time;
 
-    bool expired;
     int expire_in;  // game is expiring in expire_in seconds
 	
-	bool finished;
 	finish_list_type finish_list;
 	
 	std::string name;

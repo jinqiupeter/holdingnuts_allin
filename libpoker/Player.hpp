@@ -71,7 +71,11 @@ public:
 	
 	void resetLastAction() { last_action = Player::None; }
 	
-	
+    void setTableNo(int number) { table_no = number; };	
+    int getTableNo() { return table_no; };
+
+    void setSeatNo(int number) { seat_no = number; };	
+    int getSeatNo() { return seat_no; };
 private:
 	int client_id;
 	
@@ -88,6 +92,9 @@ private:
 	
 	bool sitout;     // is player sitting out?
     bool wanna_leave;
+
+    int table_no;
+    int seat_no;
 };
 
 

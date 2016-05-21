@@ -82,7 +82,7 @@ public:
 	int getNextActivePlayer(unsigned int pos);
 	unsigned int countPlayers();
 	unsigned int countActivePlayers();
-	unsigned int removePlayer(Player *p);
+	unsigned int removePlayer(int seat_no);
 	bool isAllin();
 	void resetLastPlayerActions();
 	
