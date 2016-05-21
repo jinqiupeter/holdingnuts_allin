@@ -172,7 +172,7 @@ bool GameController::arrangeSeat(int cid)
     return true;
 }
 
-bool GameController::addPlayer(int cid, const std::string &uuid)
+bool GameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
 {
 	// is the game full?
 	if (players.size() == max_players)
@@ -188,7 +188,7 @@ bool GameController::addPlayer(int cid, const std::string &uuid)
 	
 	Player *p = new Player;
 	p->client_id = cid;
-	p->stake = player_stakes;
+	p->stake = player_stake;
 	
 	// save a copy of the UUID (player might disconnect)
 	p->uuid = uuid;
@@ -208,6 +208,11 @@ bool GameController::addPlayer(int cid, const std::string &uuid)
     }
 
 	return true;
+}
+
+bool GameController::addPlayer(int cid, const std::string &uuid)
+{
+    return addPlayer(cid, uuid, player_stakes);
 }
 
 bool GameController::removePlayer(int cid)

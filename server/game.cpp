@@ -864,9 +864,11 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 	
 	int gid;
 	t >> gid;
+    int player_stake;
+    t >> player_stake;
 	
 	string passwd = "";
-	if (t.count() >=2)
+	if (t.count() >=3)
 		t >> passwd;
 	
 	GameController *g = get_game_by_id(gid);
@@ -919,7 +921,7 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 		return 1;
 	}
 	
-	if (!g->addPlayer(client->id, client->uuid))
+	if (!g->addPlayer(client->id, client->uuid, player_stake))
 	{
 		send_err(client, 0 /*FIXME*/, "unable to register");
 		return 1;
@@ -1362,6 +1364,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		g->addPlayer(client->id, client->uuid);
 		g->setOwner(client->id);
 		g->setName(ginfo.name);
+        if (ginfo.type == GameController::RingGame)  
+            g->setBlindRule(GameController::BlindNone); // Sit&Go games dont raise blinds
 		g->setBlindsStart(ginfo.blinds_start);
 		g->setBlindsFactor(ginfo.blinds_factor);
 		g->setBlindsTime(ginfo.blinds_time);

@@ -68,6 +68,7 @@ public:
 	
 	
 	typedef enum {
+        BlindNone,
 		BlindByTime,
 		//BlindByRound,
 		BlindByKnockout
@@ -104,6 +105,8 @@ public:
 	unsigned int getBlindsFactor() const { return blind.blinds_factor; };
 	void setBlindsTime(unsigned int blinds_time) { blind.blinds_time = blinds_time; };
 	unsigned int getBlindsTime() const { return blind.blinds_time; };
+	void setBlindRule(BlindRule rule){ blind.blindrule = rule; };
+	BlindRule getBlindRule() const { return blind.blindrule; };
 	
 	bool setPlayerStakes(chips_type stake);
 	chips_type getPlayerStakes() const { return player_stakes; };
@@ -140,6 +143,7 @@ public:
 	
     bool arrangeSeat(int cid);
 	bool addPlayer(int cid, const std::string &uuid);
+    bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);
 	bool isPlayer(int cid) const;
 	
