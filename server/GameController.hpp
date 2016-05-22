@@ -123,7 +123,7 @@ public:
 	unsigned int getPlayerMax() const { return max_players; };
 	unsigned int getPlayerCount() const { return players.size(); };
 	
-	bool getPlayerList(std::vector<int> &client_list) const;
+	bool getPlayerList(std::vector<int> &client_list, bool including_wanna_leave = false) const;
 	bool getPlayerList(std::vector<std::string> &client_list) const;
 	bool getListenerList(std::vector<int> &client_list) const;
 	void getFinishList(std::vector<Player*> &player_list) const;
@@ -141,6 +141,7 @@ public:
 	bool isFinished() const { return status == Finished; };
 	void setFinished() { status = Finished; };
 	
+    void handleWannaLeave(Table *t);
     bool arrangeSeat(int cid);
     bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);

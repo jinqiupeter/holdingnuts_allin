@@ -844,7 +844,7 @@ bool send_playerlist_all(int gid)
     // send playerlist to all registered players
 	vector<int> player_list;
 	GameController *g = get_game_by_id(gid);
-	g->getPlayerList(player_list);
+	g->getPlayerList(player_list, true);
     for (vector<int>::iterator e = player_list.begin(); e != player_list.end(); e++) {
 		clientcon* player = get_client_by_id(*e);
         send_playerlist(gid, player);
@@ -993,13 +993,11 @@ int unregister_game(clientcon *client, int gid)
 		return 1;
 	}
 	
-    /* Peter: test needed
-	if (g->isStarted())
+	if (g->isStarted() && g->getGameType() != GameController::RingGame)
 	{
 		send_err(client, 0 , "game has already been started");
 		return 1;
 	}
-    */
 	
 	if (!g->isPlayer(client->id))
 	{

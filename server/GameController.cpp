@@ -329,12 +329,14 @@ bool GameController::setPlayerStakes(chips_type stake)
 	return true;
 }
 
-bool GameController::getPlayerList(vector<int> &client_list) const
+bool GameController::getPlayerList(vector<int> &client_list, bool including_wanna_leave) const
 {
 	client_list.clear();
 	
 	for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
-        if (!e->second->wanna_leave) {
+        if (!including_wanna_leave && !e->second->wanna_leave) {
+            client_list.push_back(e->first);
+        } else {
             client_list.push_back(e->first);
         }
     }
@@ -700,8 +702,32 @@ void GameController::dealRiver(Table *t)
     snap(t->table_id, SnapCards, msg);
 }
 
+void GameController::handleWannaLeave(Table *t)
+{
+    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
+    if (t->state != Table::NewRound)
+        return;
+
+    for (players_type::iterator e = players.begin(); e != players.end();)
+    {
+        if (e->second->wanna_leave) {
+            log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
+            // remove player from occupied seat
+            t->removePlayer(e->second->getSeatNo());
+
+            delete e->second;
+            players.erase(e);
+        }
+        e++;
+    }
+}
+
 void GameController::stateNewRound(Table *t)
 {
+    handleWannaLeave(t);
+    if (t->countPlayers() < 2) 
+        return;
+
     // count up current hand number
     hand_no++;
 
@@ -1494,19 +1520,6 @@ void GameController::stateEndRound(Table *t)
         t->seats[seat_num].occupied = false;
     }
 
-    // handle wanna_leave
-    for (players_type::iterator e = players.begin(); e != players.end();)
-    {
-        if (e->second->wanna_leave) {
-            log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
-            // remove player from occupied seat
-            t->removePlayer(e->second->getSeatNo());
-
-            delete e->second;
-            players.erase(e);
-        }
-        e++;
-    }
 
     /*
     if (status == Started) {
@@ -1523,6 +1536,7 @@ void GameController::stateEndRound(Table *t)
     t->dealer = t->getNextPlayer(t->dealer);
 
     t->scheduleState(Table::NewRound, 2);
+
 }
 
 void GameController::stateDelay(Table *t)
@@ -1540,10 +1554,6 @@ int GameController::handleTable(Table *t)
     if (t->delay)
     {
         stateDelay(t);
-        return 0;
-    }
-
-    if (t->countPlayers() < 2 && type == RingGame) {
         return 0;
     }
 
