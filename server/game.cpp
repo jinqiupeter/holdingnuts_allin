@@ -853,6 +853,46 @@ bool send_playerlist_all(int gid)
     return true;
 }
 
+int client_cmd_rebuy(clientcon *client, Tokenizer &t)
+{
+	if (!t.count())
+	{
+		send_err(client, ErrParameters);
+		return 1;
+	}
+	
+	int gid;
+	t >> gid;
+    int rebuy_stake;
+    t >> rebuy_stake;
+	
+	GameController *g = get_game_by_id(gid);
+	if (!g)
+	{
+		send_err(client, 0 /*FIXME*/, "game does not exist");
+		return 1;
+	}
+
+	log_msg("game ", "rebuying %d for user %d in game %d", rebuy_stake, client->id, gid);
+	
+	if (!g->isPlayer(client->id))
+	{
+		send_err(client, 0 /*FIXME*/, "you are not registered");
+		return 1;
+	}
+	
+	if (!g->rebuy(client->id, rebuy_stake))
+	{
+		send_err(client, 0 /*FIXME*/, "unable to rebuy");
+		return 1;
+	}
+	
+	
+	log_msg("client ", "player %d rebought stake %d", client->id, rebuy_stake);
+	
+    send_ok_game(gid, client);
+	return 0;
+}
 
 int client_cmd_register(clientcon *client, Tokenizer &t)
 {
@@ -1520,6 +1560,8 @@ int client_execute(clientcon *client, const char *cmd)
 		return client_cmd_chat(client, t);
 	else if (command == "REQUEST")
 		return client_cmd_request(client, t);
+	else if (command == "REBUY")
+		return client_cmd_rebuy(client, t);
 	else if (command == "REGISTER")
 		return client_cmd_register(client, t);
 	else if (command == "UNREGISTER")

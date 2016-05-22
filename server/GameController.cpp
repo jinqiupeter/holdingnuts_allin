@@ -172,6 +172,16 @@ bool GameController::arrangeSeat(int cid)
     return true;
 }
 
+bool GameController::rebuy(int cid, chips_type rebuy_stake)
+{
+	Player *p = findPlayer(cid);
+	if (!p)
+		return false;
+	
+	p->setStake(p->getStake() + rebuy_stake);
+    return true;
+}
+
 bool GameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
 {
 	// is the game full?
@@ -188,7 +198,7 @@ bool GameController::addPlayer(int cid, const std::string &uuid, chips_type play
 	
 	Player *p = new Player;
 	p->client_id = cid;
-	p->stake = player_stake;
+	p->setStake(player_stake);
 	
 	// save a copy of the UUID (player might disconnect)
 	p->uuid = uuid;

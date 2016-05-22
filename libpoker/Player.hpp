@@ -65,6 +65,7 @@ public:
 	Player();
 	
 	chips_type getStake() const { return stake; };
+    void setStake(chips_type aStake) {stake = aStake; };
 	int getClientId() const { return client_id; };
 	
 	const std::string& getPlayerUUID() const { return uuid; };

@@ -142,6 +142,7 @@ public:
 	void setFinished() { status = Finished; };
 	
     bool arrangeSeat(int cid);
+    bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);
     bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);
