@@ -1619,7 +1619,7 @@ void GameController::placeTable(int offset, int total_players)
         Table::Seat *seat = &(t->seats[place]);
         Player *p = *it;
         p->setTableNo(t->getTableId());
-        p->setSeatNo(place_idx);
+        p->setSeatNo(place);
 
         dbg_msg("placing", "place_row=%d place_idx=%d place=%d player=%d",
                 place_row, place_idx, place, p->client_id);
