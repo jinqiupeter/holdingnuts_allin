@@ -126,7 +126,7 @@ unsigned int randomSeat()
     fread (&seed, sizeof (seed), 1, urandom);
     fclose(urandom);
 
-    int max = 9, min = 0;
+    int max = 8, min = 0;
     srand(seed);
     int randNum = rand()%(max-min + 1) + min;
 
