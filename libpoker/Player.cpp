@@ -35,4 +35,6 @@ Player::Player()
 
     table_no = -1;
     seat_no = -1;
+    stake = 0;
+    rebuy_stake = 0;
 }

@@ -890,7 +890,6 @@ int client_cmd_rebuy(clientcon *client, Tokenizer &t)
 	
 	log_msg("client ", "player %d rebought stake %d", client->id, rebuy_stake);
 	
-    send_ok_game(gid, client);
 	return 0;
 }
 

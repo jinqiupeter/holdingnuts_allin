@@ -66,6 +66,10 @@ public:
 	
 	chips_type getStake() const { return stake; };
     void setStake(chips_type aStake) {stake = aStake; };
+
+	chips_type getRebuyStake() const { return rebuy_stake; };
+    void setRebuyStake(chips_type aStake) {rebuy_stake = aStake; };
+
 	int getClientId() const { return client_id; };
 	
 	const std::string& getPlayerUUID() const { return uuid; };
@@ -85,6 +89,7 @@ private:
 	
 	chips_type stake;		// currrent stake
 	chips_type stake_before;	// stake before new hand
+	chips_type rebuy_stake;	// rebuy stake is added to stake in Table.NewRound
 	
 	HoleCards holecards;
 	

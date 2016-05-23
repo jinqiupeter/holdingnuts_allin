@@ -142,6 +142,7 @@ public:
 	void setFinished() { status = Finished; };
 	
     void handleWannaLeave(Table *t);
+    void handleRebuy(Table *t);
     bool arrangeSeat(int cid);
     bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);

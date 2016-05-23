@@ -178,7 +178,7 @@ bool GameController::rebuy(int cid, chips_type rebuy_stake)
 	if (!p)
 		return false;
 	
-	p->setStake(p->getStake() + rebuy_stake);
+	p->setRebuyStake(rebuy_stake);
     return true;
 }
 
@@ -353,10 +353,11 @@ bool GameController::getPlayerList(vector<string> &client_list) const
             char tmp[1024];
             string sp = "";
             snprintf(tmp, sizeof(tmp),
-                    "%d:%d:%d ",
+                    "%d:%d:%d:%d ",
                     e->first,
                     e->second->getTableNo(),
-                    e->second->getSeatNo());
+                    e->second->getSeatNo(),
+                    e->second->getStake());
 
             sp += tmp;
             client_list.push_back(sp);
@@ -700,6 +701,20 @@ void GameController::dealRiver(Table *t)
     snprintf(msg, sizeof(msg), "%d %s",
             SnapCardsRiver, card);
     snap(t->table_id, SnapCards, msg);
+}
+
+void GameController::handleRebuy(Table *t)
+{
+    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
+    if (t->state != Table::NewRound)
+        return;
+
+    for (players_type::iterator e = players.begin(); e != players.end();)
+    {
+        Player *p = e->second;
+        p->setStake(p->getStake() + p->getRebuyStake());
+        e++;
+    }
 }
 
 void GameController::handleWannaLeave(Table *t)
