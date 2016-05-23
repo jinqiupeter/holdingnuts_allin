@@ -713,6 +713,11 @@ void GameController::handleRebuy(Table *t)
     {
         Player *p = e->second;
         p->setStake(p->getStake() + p->getRebuyStake());
+        p->setRebuyStake(0); //clear rebuy stake so it wont be added next time
+        if (t->seats[p->getSeatNo()].occupied == false && p->getStake() >= blind.amount) {
+            // player has gone broken and rebought, mark him as occupied so he can join next round
+            t->seats[p->getSeatNo()].occupied = true;
+        }
         e++;
     }
 }
@@ -739,6 +744,7 @@ void GameController::handleWannaLeave(Table *t)
 
 void GameController::stateNewRound(Table *t)
 {
+    handleRebuy(t);
     handleWannaLeave(t);
     if (t->countPlayers() < 2) 
         return;
