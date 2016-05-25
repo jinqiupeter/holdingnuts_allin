@@ -453,6 +453,7 @@ bool GameController::setPlayerAction(int cid, Player::PlayerAction action, chips
     p->next_action.valid = true;
     p->next_action.action = action;
     p->next_action.amount = amount;
+    p->setTimedoutCount(0);
 
     return true;
 }
@@ -725,7 +726,7 @@ void GameController::handleRebuy(Table *t)
 void GameController::handleWannaLeave(Table *t)
 {
     // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
-    if (t->state != Table::NewRound)
+    if (t->state != Table::NewRound || type != RingGame)
         return;
 
     for (players_type::iterator e = players.begin(); e != players.end();)
@@ -933,15 +934,19 @@ void GameController::stateBetting(Table *t)
 
     chips_type minimum_bet = determineMinimumBet(t);
 
+    log_msg("game", "nomoreaction: %d, p->stake %d", t->nomoreaction, p->getStake());
+    log_msg("game", "p->next_action.action: %d, p->next_action.valid %d", p->next_action.action, p->next_action.valid);
     if (t->nomoreaction ||		// early showdown, no more action at table possible, or
             p->stake == 0)		// player is allin and has no more options
     {
         action = Player::None;
         allowed_action = true;
+        log_msg("game", "no more action for player %d", p->getClientId());
     }
     else if (p->next_action.valid)  // has player set an action?
     {
         action = p->next_action.action;
+        log_msg("game", "player %d has valid action", p->getClientId(), action);
 
         if (action == Player::Fold)
             allowed_action = true;
@@ -1023,14 +1028,24 @@ void GameController::stateBetting(Table *t)
         p->next_action.valid = false;
     }
     else
-    {
+    { 
         // handle player timeout
 #ifndef SERVER_TESTING
         if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > timeout)
         {
-            // let player sit out (if not already sitting out)
-            p->sitout = true;
+            // if player timed out more than 3 times, mark user as wanna leave
+            p->setTimedoutCount(p->getTimedoutCount() + 1);
+            if (p->getTimedoutCount() >= 3) {
+                //mark the player wanna_leave instead of removing it
+                log_msg("game", "player %d timed out more thatn 3 time, marking as sitout", p->getClientId());
+                p->sitout = true;
+                if (type == RingGame) {
+                    p->wanna_leave = true;
+                    log_msg("game", "player %d timed out more thatn 3 time, marking as wanna_leave", p->getClientId());
+                }
+            }
 
+            
             // auto-action: fold, or check if possible
             if (t->seats[t->cur_player].bet < t->bet_amount)
                 action = Player::Fold;
@@ -1039,13 +1054,15 @@ void GameController::stateBetting(Table *t)
 
             allowed_action = true;
             auto_action = true;
+
+            log_msg("game", "for player %d timed out, setting his action to %d", p->getClientId(), action);
         }
 #endif /* SERVER_TESTING */
     }
 
 
     // return here if no or invalid action
-    if (!allowed_action)
+    if (!allowed_action) 
         return;
 
 
@@ -1108,6 +1125,8 @@ void GameController::stateBetting(Table *t)
     // all players except one folded, so end this hand
     if (t->countActivePlayers() == 1)
     {
+        log_msg("game", "only one active player left, going to Table::AskShow");
+
         // collect bets into pot
         t->collectBets();
 
@@ -1802,7 +1821,7 @@ int GameController::tick()
     {
         log_msg("game", "game %d is ended ", getGameId());
         // delay before game gets deleted
-        if ((unsigned int) difftime(time(NULL), ended_time) >= 4 * 60)
+        if ((unsigned int) difftime(time(NULL), ended_time) >= 1 * 60)
         {
             return -1;
         }
@@ -1850,7 +1869,7 @@ int GameController::tick()
 
 
     // handle expiration
-    if (difftime(time(NULL), started_time) >= expire_in) {
+    if (difftime(time(NULL), started_time) >= expire_in && type == RingGame) { // SNT & MTT games don't expire
         status = Expired;
         ended_time = time(NULL);
 

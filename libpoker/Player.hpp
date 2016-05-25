@@ -70,6 +70,9 @@ public:
 	chips_type getRebuyStake() const { return rebuy_stake; };
     void setRebuyStake(chips_type aStake) {rebuy_stake = aStake; };
 
+	int getTimedoutCount() const { return timedout_count; };
+    void setTimedoutCount(int count) {timedout_count = count; };
+
 	int getClientId() const { return client_id; };
 	
 	const std::string& getPlayerUUID() const { return uuid; };
@@ -101,6 +104,7 @@ private:
 
     int table_no;
     int seat_no;
+    int timedout_count; // if player timed out > 3 times, mark player as wanna_leave
 };
 
 

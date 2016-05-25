@@ -37,4 +37,5 @@ Player::Player()
     seat_no = -1;
     stake = 0;
     rebuy_stake = 0;
+    timedout_count = 0;
 }
