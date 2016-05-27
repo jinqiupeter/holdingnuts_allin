@@ -596,12 +596,14 @@ void GameController::sendTableSnapshot(Table *t)
             "cc:%s "           // <community-cards>
             "%s "              // seats
             "%s "              // pots
+            "%d "              // current big blind amount
             "%d",              // minimum bet
             t->state, (t->state == Table::Betting) ? t->betround : -1,
             sturn.c_str(),
             scards.c_str(),
             sseats.c_str(),
             spots.c_str(),
+            blind.amount,
             minimum_bet);
 
     snap(t->table_id, SnapTable, msg);
