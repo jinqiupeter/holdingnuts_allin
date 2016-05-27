@@ -911,6 +911,12 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 		t >> passwd;
 	
 	GameController *g = get_game_by_id(gid);
+	if (!g)
+	{
+		send_err(client, 0 /*FIXME*/, "game does not exist");
+		return 1;
+	}
+
 	log_msg("game ", "registering user %d to game %d", client->id, gid);
     vector<int> player_list;
     g->getPlayerList(player_list);
@@ -918,11 +924,6 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
         log_msg("game ", " found player %d for game %d", *e1, gid);
     }
 
-	if (!g)
-	{
-		send_err(client, 0 /*FIXME*/, "game does not exist");
-		return 1;
-	}
 	
 	if (g->isStarted() && g->getGameType() != GameController::RingGame)
 	{
