@@ -900,10 +900,24 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 		return 1;
 	}
 	
-	if (g->isPlayer(client->id))
+	if (g->isPlayer(client->id) )
 	{
-		send_err(client, 0 /*FIXME*/, "you are already registered");
-		return 1;
+        if (g->getGameType() == GameController::RingGame) {
+            if(!g->resumePlayer(client->id)) {
+                send_err(client, 0 /*FIXME*/, "Could not resume player");
+                return 1;
+            } else {
+                send_ok_game(gid, client);
+                // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
+                send_gameinfo(client, gid);
+                // send playerlist to all registered players
+                send_playerlist_all(gid);
+                return 0;
+            }
+        } else {
+            send_err(client, 0 /*FIXME*/, "you are already registered");
+            return 1;
+        }
 	}
 	
 	// check for max-games-register limit

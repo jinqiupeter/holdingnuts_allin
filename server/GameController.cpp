@@ -257,6 +257,18 @@ bool GameController::removePlayer(int cid)
 	return true;
 }
 
+bool GameController::resumePlayer(int cid)
+{
+	Player *p = findPlayer(cid);
+	
+	if (!p)
+		return false;
+	
+    //mark the player wanna_leave instead of removing it
+    p->wanna_leave = false;
+
+	return true;
+}
 bool GameController::isPlayer(int cid) const
 {
 	players_type::const_iterator it = players.find(cid);

@@ -148,6 +148,7 @@ public:
 	bool addPlayer(int cid, const std::string &uuid);
     bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);
+	bool resumePlayer(int cid);
 	bool isPlayer(int cid) const;
 	
 	bool addSpectator(int cid);
