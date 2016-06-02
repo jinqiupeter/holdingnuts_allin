@@ -55,10 +55,15 @@ void log_msg(const char *level, const char *format, ...)
 		if (!logger[i])
 			continue;
 		
-		if (log_timestamp)
-			fprintf(logger[i], "[%ld %10s]  %s\n", time(0), level, msg);
-		else
+		if (log_timestamp) {
+            char s[100];
+            time_t t = time(NULL);
+            struct tm * p = localtime(&t);
+            strftime(s, 100, "%F %H:%M:%S", p);
+			fprintf(logger[i], "[%s %10s]  %s\n", s, level, msg);
+        } else {
 			fprintf(logger[i], "[%10s]  %s\n", level, msg);
+        }
 		
 		fflush(logger[i]);
 	}

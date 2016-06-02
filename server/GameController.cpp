@@ -773,10 +773,7 @@ void GameController::stateNewRound(Table *t)
     snprintf(msg, sizeof(msg), "%d %d", SnapGameStateNewHand, hand_no);
     snap(t->table_id, SnapGameState, msg);
 
-#ifdef DEBUG
     log_msg("Table", "Hand #%d (gid=%d tid=%d)", hand_no, game_id, t->table_id);
-#endif
-
 
 #ifndef SERVER_TESTING
     // fill and shuffle card-deck
@@ -951,19 +948,15 @@ void GameController::stateBetting(Table *t)
 
     chips_type minimum_bet = determineMinimumBet(t);
 
-    log_msg("game", "nomoreaction: %d, p->stake %d", t->nomoreaction, p->getStake());
-    log_msg("game", "p->next_action.action: %d, p->next_action.valid %d", p->next_action.action, p->next_action.valid);
     if (t->nomoreaction ||		// early showdown, no more action at table possible, or
             p->stake == 0)		// player is allin and has no more options
     {
         action = Player::None;
         allowed_action = true;
-        log_msg("game", "no more action for player %d", p->getClientId());
     }
     else if (p->next_action.valid)  // has player set an action?
     {
         action = p->next_action.action;
-        log_msg("game", "player %d has valid action", p->getClientId(), action);
 
         if (action == Player::Fold)
             allowed_action = true;
@@ -1071,8 +1064,6 @@ void GameController::stateBetting(Table *t)
 
             allowed_action = true;
             auto_action = true;
-
-            log_msg("game", "for player %d timed out, setting his action to %d", p->getClientId(), action);
         }
 #endif /* SERVER_TESTING */
     }
@@ -1142,8 +1133,6 @@ void GameController::stateBetting(Table *t)
     // all players except one folded, so end this hand
     if (t->countActivePlayers() == 1)
     {
-        log_msg("game", "only one active player left, going to Table::AskShow");
-
         // collect bets into pot
         t->collectBets();
 
@@ -1613,8 +1602,6 @@ int GameController::handleTable(Table *t)
         stateDelay(t);
         return 0;
     }
-
-    log_msg("game", "handling table state: %d", t->state);
 
     if (t->state == Table::NewRound)
         stateNewRound(t);

@@ -211,7 +211,7 @@ bool config_load()
 	
 	
 	char cfgfile[1024];
-	snprintf(cfgfile, sizeof(cfgfile), "%s/server.cfg", sys_config_path());
+	snprintf(cfgfile, sizeof(cfgfile), "%s/holdingnuts.cfg", sys_config_path());
 	
 	if (config.load(cfgfile))
 		log_msg("config", "Loaded configuration from %s", cfgfile);
@@ -280,7 +280,7 @@ int main(int argc, char **argv)
 	if (config.getBool("log"))
 	{
 		char logfile[1024];
-		snprintf(logfile, sizeof(logfile), "%s/server.log", sys_config_path());
+		snprintf(logfile, sizeof(logfile), "%s/../logs/holdingnuts.log", sys_config_path());
 		fplog = file_open(logfile, config.getBool("log_append")
 				  ? mode_append
 				  : mode_write);
