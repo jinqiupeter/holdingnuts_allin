@@ -227,16 +227,17 @@ bool GameController::addPlayer(int cid, const std::string &uuid)
 
 bool GameController::removePlayer(int cid)
 {
-	// don't allow removing if game has already been started
-    // Peter: comment out to see if there is anything wrong
-	//if (started)
-	//	return false;
+	if (status == Started && type != RingGame )
+		return false;
 	
 	Player *p = findPlayer(cid);
 	
 	if (!p)
 		return false;
 	
+    if (p->wanna_leave)
+        return true;
+
     // fold players hole card before remove
     setPlayerAction(cid, Player::Fold, 0);
 
@@ -346,8 +347,10 @@ bool GameController::getPlayerList(vector<int> &client_list, bool including_wann
 	client_list.clear();
 	
 	for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
-        if (!including_wanna_leave && !e->second->wanna_leave) {
-            client_list.push_back(e->first);
+        if (e->second->wanna_leave) {
+            if (including_wanna_leave)
+                client_list.push_back(e->first);
+            continue;
         } else {
             client_list.push_back(e->first);
         }
@@ -1884,10 +1887,10 @@ int GameController::tick()
 
     // handle expiration
     if (difftime(time(NULL), started_time) >= expire_in && type == RingGame) { // SNT & MTT games don't expire
-        status = Expired;
+        status = Ended;
         ended_time = time(NULL);
 
-        snprintf(msg, sizeof(msg), "%d", SnapGameStateExpire);
+        snprintf(msg, sizeof(msg), "%d", SnapGameStateEnd);
         snap(-1, SnapGameState, msg);
     }
 

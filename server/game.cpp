@@ -813,9 +813,10 @@ bool send_playerlist_all(int gid)
     // send playerlist to all registered players
 	vector<int> player_list;
 	GameController *g = get_game_by_id(gid);
-	g->getPlayerList(player_list, true);
+	g->getPlayerList(player_list);
     for (vector<int>::iterator e = player_list.begin(); e != player_list.end(); e++) {
 		clientcon* player = get_client_by_id(*e);
+        log_msg("game ", "sending playerlist to player %d", *e);
         send_playerlist(gid, player);
     }
 
