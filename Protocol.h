@@ -53,6 +53,7 @@ typedef enum {
 	SnapPlayerCurrent	= 0x0b,
 	SnapPlayerShow		= 0x0c,
 	SnapFoyer		= 0x10,
+	SnapRespite		= 0x11,
 } snaptype;
 
 //! \brief Snapshot gamestate types

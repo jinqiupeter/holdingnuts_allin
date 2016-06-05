@@ -73,6 +73,9 @@ public:
 	int getTimedoutCount() const { return timedout_count; };
     void setTimedoutCount(int count) {timedout_count = count; };
 
+	unsigned int getTimeout() const { return timeout; };
+    void setTimeout(int time_out) {timeout = time_out; };
+
 	int getClientId() const { return client_id; };
 	
 	const std::string& getPlayerUUID() const { return uuid; };
@@ -105,6 +108,7 @@ private:
     int table_no;
     int seat_no;
     int timedout_count; // if player timed out > 3 times, mark player as wanna_leave
+    unsigned int timeout; //each user has different timeout, to support buy timeout
 };
 
 

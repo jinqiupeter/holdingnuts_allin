@@ -863,6 +863,46 @@ int client_cmd_rebuy(clientcon *client, Tokenizer &t)
 	return 0;
 }
 
+int client_cmd_respite(clientcon *client, Tokenizer &t)
+{
+	if (!t.count())
+	{
+		send_err(client, ErrParameters);
+		return 1;
+	}
+	
+	int gid;
+	t >> gid;
+    int respite;
+    t >> respite;
+	
+	GameController *g = get_game_by_id(gid);
+	if (!g)
+	{
+		send_err(client, 0 /*FIXME*/, "game does not exist");
+		return 1;
+	}
+
+	log_msg("game ", "adding timeout %d for user %d in game %d", respite, client->id, gid);
+	
+	if (!g->isPlayer(client->id))
+	{
+		send_err(client, 0 /*FIXME*/, "you are not registered");
+		return 1;
+	}
+	
+	if (!g->addTimeout(client->id, respite))
+	{
+		send_err(client, 0 /*FIXME*/, "unable to add timeout");
+		return 1;
+	}
+	
+	
+	log_msg("client ", "player %d added timeout %d", client->id, respite);
+	
+	return 0;
+}
+
 int client_cmd_register(clientcon *client, Tokenizer &t)
 {
 	if (!t.count())
@@ -1544,6 +1584,8 @@ int client_execute(clientcon *client, const char *cmd)
 		return client_cmd_request(client, t);
 	else if (command == "REBUY")
 		return client_cmd_rebuy(client, t);
+	else if (command == "RESPITE")
+		return client_cmd_respite(client, t);
 	else if (command == "REGISTER")
 		return client_cmd_register(client, t);
 	else if (command == "UNREGISTER")

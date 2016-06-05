@@ -182,6 +182,25 @@ bool GameController::rebuy(int cid, chips_type rebuy_stake)
     return true;
 }
 
+bool GameController::addTimeout(int cid, unsigned int timeout_to_add)
+{
+	Player *p = findPlayer(cid);
+	if (!p)
+		return false;
+	
+	p->setTimeout(p->getTimeout() + timeout_to_add);
+
+    // send pot-win snapshot
+    int tid = p->getTableNo();
+    Table *t = tables[tid];
+    int time_elapsed = (unsigned int)difftime(time(NULL), t->timeout_start);
+    int time_left = p->getTimeout() - time_elapsed;
+    snprintf(msg, sizeof(msg), "%d %d %d", p->client_id, timeout_to_add, time_left);
+    snap(t->table_id, SnapRespite, msg);
+
+    return true;
+}
+
 bool GameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
 {
 	// is the game full?
@@ -199,6 +218,7 @@ bool GameController::addPlayer(int cid, const std::string &uuid, chips_type play
 	Player *p = new Player;
 	p->client_id = cid;
 	p->setStake(player_stake);
+    p->setTimeout(timeout);
 	
 	// save a copy of the UUID (player might disconnect)
 	p->uuid = uuid;
@@ -828,6 +848,7 @@ void GameController::stateNewRound(Table *t)
         p->resetLastAction();
 
         p->stake_before = p->stake;	// remember stake before this hand
+        p->setTimeout(timeout);
     }
 
 
@@ -902,10 +923,8 @@ void GameController::stateBlinds(Table *t)
     t->seats[t->bb].bet = amount;
     pBig->stake -= amount;
 
-
     // initialize the player's timeout
     t->timeout_start = time(NULL);
-
 
     // give out hole-cards
     dealHole(t);
@@ -1041,7 +1060,7 @@ void GameController::stateBetting(Table *t)
     { 
         // handle player timeout
 #ifndef SERVER_TESTING
-        if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > timeout)
+        if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > p->getTimeout())
         {
             // if player timed out more than 3 times, mark user as wanna leave
             p->setTimedoutCount(p->getTimedoutCount() + 1);
@@ -1258,6 +1277,16 @@ void GameController::stateBetting(Table *t)
 
 void GameController::stateBettingEnd(Table *t)
 {
+    //reset player's timeout
+    for (unsigned int i = 0; i < 10; i++)
+    {
+        if (!t->seats[i].occupied)
+            continue;
+
+        Player *p = t->seats[i].player;
+        p->setTimeout(timeout);
+    }
+
     t->state = Table::Betting;
     sendTableSnapshot(t);
 }

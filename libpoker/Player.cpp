@@ -38,4 +38,5 @@ Player::Player()
     stake = 0;
     rebuy_stake = 0;
     timedout_count = 0;
+    timeout = 0;
 }

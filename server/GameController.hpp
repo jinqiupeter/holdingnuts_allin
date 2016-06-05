@@ -150,6 +150,7 @@ public:
 	bool removePlayer(int cid);
 	bool resumePlayer(int cid);
 	bool isPlayer(int cid) const;
+    bool addTimeout(int cid, unsigned int timeout_to_add);
 	
 	bool addSpectator(int cid);
 	bool removeSpectator(int cid);
