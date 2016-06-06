@@ -449,8 +449,9 @@ void GameController::chat(int cid, int tid, const char* msg)
 void GameController::snap(int tid, int sid, const char* msg)
 {
     // players
-    for (players_type::const_iterator e = players.begin(); e != players.end(); e++)
+    for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
         client_snapshot(game_id, tid, e->first, sid, msg);
+    }
 
     // spectators
     for (spectators_type::const_iterator e = spectators.begin(); e != spectators.end(); e++)
@@ -1325,7 +1326,7 @@ void GameController::stateAskShow(Table *t)
     {
 #ifndef SERVER_TESTING
         // handle player timeout
-        const int timeout = 4;   // FIXME: configurable
+        const int timeout = 1;   // FIXME: configurable
         if ((int)difftime(time(NULL), t->timeout_start) > timeout || p->sitout)
         {
             // default on showdown is "to show"
@@ -1538,7 +1539,7 @@ void GameController::stateShowdown(Table *t)
 
     sendTableSnapshot(t);
 
-    t->scheduleState(Table::EndRound, 2);
+    t->scheduleState(Table::EndRound, 4);
 }
 
 void GameController::stateEndRound(Table *t)
@@ -1610,7 +1611,7 @@ void GameController::stateEndRound(Table *t)
     // determine next dealer
     t->dealer = t->getNextPlayer(t->dealer);
 
-    t->scheduleState(Table::NewRound, 2);
+    t->scheduleState(Table::NewRound, 1);
 
 }
 
@@ -1632,6 +1633,7 @@ int GameController::handleTable(Table *t)
         return 0;
     }
 
+    log_msg("game", "handling table state: %d", t->state);
     if (t->state == Table::NewRound)
         stateNewRound(t);
     else if (t->state == Table::Blinds)

@@ -223,8 +223,9 @@ bool client_snapshot(int from_gid, int from_tid, int to, int sid, const char *me
 		from_gid, from_tid, sid, message);
 	
 	clientcon* toclient = get_client_by_id(to);
-	if (toclient && toclient->state & Introduced)
+	if (toclient && toclient->state & Introduced) {
 		send_msg(toclient->sock, buf);
+    }
 	
 	return true;
 }
