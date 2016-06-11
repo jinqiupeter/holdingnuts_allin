@@ -744,8 +744,8 @@ void GameController::dealRiver(Table *t)
 
 void GameController::handleRebuy(Table *t)
 {
-    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
-    if (t->state != Table::NewRound)
+    // add rebuy stake to players' stake , this should be called only when table state is Table::EndRound
+    if (t->state != Table::EndRound)
         return;
 
     for (players_type::iterator e = players.begin(); e != players.end();)
@@ -783,7 +783,7 @@ void GameController::handleWannaLeave(Table *t)
 
 void GameController::stateNewRound(Table *t)
 {
-    handleRebuy(t);
+
     handleWannaLeave(t);
     if (t->countPlayers() < 2) 
         return;
@@ -1606,6 +1606,8 @@ void GameController::stateEndRound(Table *t)
     }
     */
 
+    handleRebuy(t);
+    // send table snap after rebuy is added into user's stake so buying.avaliable can be updated
     sendTableSnapshot(t);
 
     // determine next dealer
