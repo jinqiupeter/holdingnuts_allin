@@ -1240,8 +1240,6 @@ int client_cmd_action(clientcon *client, Tokenizer &t)
 	
 	g->setPlayerAction(client->id, a, amount);
 	
-    send_ok_game(gid, client);
-	
 	return 0;
 }
 
