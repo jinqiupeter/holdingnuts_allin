@@ -1571,6 +1571,9 @@ void GameController::stateEndRound(Table *t)
         }
     }
 
+    // send table snap after rebuy is added into user's stake so buying.avaliable can be updated
+    sendTableSnapshot(t);
+
     // remove players in right order: sorted by stake_before
     // FIXME: how to handle players which had the same stake?
     for (multimap<chips_type,unsigned int>::iterator n = broken_players.begin(); n != broken_players.end(); n++)
@@ -1591,7 +1594,6 @@ void GameController::stateEndRound(Table *t)
 
         snap(t->table_id, SnapGameState, msg);
 
-
         // mark seat as unused
         t->seats[seat_num].occupied = false;
     }
@@ -1607,9 +1609,6 @@ void GameController::stateEndRound(Table *t)
     */
 
     handleRebuy(t);
-    // send table snap after rebuy is added into user's stake so buying.avaliable can be updated
-    sendTableSnapshot(t);
-
     // determine next dealer
     t->dealer = t->getNextPlayer(t->dealer);
 

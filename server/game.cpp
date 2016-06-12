@@ -1017,18 +1017,19 @@ int unregister_game(clientcon *client, int gid)
 		send_err(client, 0 /*FIXME*/, "game does not exist");
 		return 1;
 	}
-	
-	if (g->isStarted() && g->getGameType() != GameController::RingGame)
-	{
-		send_err(client, 0 , "game has already been started");
-		return 1;
-	}
-	
+
 	if (!g->isPlayer(client->id))
 	{
 		send_err(client, 0 /*FIXME*/, "you are not registered");
 		return 1;
 	}
+	
+	if ((!g->isCreated()) && g->getGameType() != GameController::RingGame)
+	{
+		send_err(client, 0 , "leaving game is not allowed for non-Sit&Go games when the game is not in Waiting state");
+		return 1;
+	}
+	
 	
 	if (!g->removePlayer(client->id))
 	{
@@ -1227,8 +1228,10 @@ int client_cmd_action(clientcon *client, Tokenizer &t)
 		a = Player::Muck;
 	else if (action == "sitout")
 		a = Player::Sitout;
-	else if (action == "back")
+	else if (action == "back") {
 		a = Player::Back;
+        send_playerlist(gid, client);
+    }
 	else if (action == "reset")
 		a = Player::ResetAction;
 	else

@@ -135,6 +135,7 @@ public:
     int getExpireIn() const { return expire_in; };
 	
 	bool isStarted() const { return status == Started; };
+	bool isCreated() const { return status == Created; };
 	bool isPaused() const { return status == Paused; };
 	bool isEnded() const { return status == Ended; };
 	
