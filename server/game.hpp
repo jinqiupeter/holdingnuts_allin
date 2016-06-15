@@ -35,6 +35,8 @@
 #include "Protocol.h"
 
 #include "GameController.hpp"
+#include "SitAndGoGameController.hpp"
+#include "SNGGameController.hpp"
 
 
 //! \brief Client connection states

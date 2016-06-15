@@ -46,7 +46,6 @@ static char msg[1024];
 static int MAX_PLAYERS_PER_TABLE = 9;
 static int MIN_PLAYERS_PER_TABLE = 6;
 static int MAX_DIFF = 2;
-int tid = -1;
 
 GameController::GameController()
 {
@@ -64,6 +63,8 @@ GameController::GameController()
 	name = "game";
 	password = "";
 	owner = -1;
+
+    tid = -1;
 }
 
 GameController::GameController(const GameController& g)
@@ -117,61 +118,6 @@ void GameController::reset()
 	finish_list.clear();
 }
 
-unsigned int randomSeat()
-{
-    unsigned int seed;
-    FILE *urandom;
-
-    urandom = fopen ("/dev/urandom", "r");
-    fread (&seed, sizeof (seed), 1, urandom);
-    fclose(urandom);
-
-    int max = 8, min = 0;
-    srand(seed);
-    int randNum = rand()%(max-min + 1) + min;
-
-    return randNum;
-}
-
-bool GameController::arrangeSeat(int cid)
-{
-    if (type != RingGame)
-        return false;
-
-	Player *p = findPlayer(cid);
-	if (!p)
-		return false;
-	
-    // Sit&Go games should always have only one table
-	tables_type::iterator e = tables.begin();
-    if (e == tables.end()) {
-		log_msg("arrangeSeat", "no table found");
-        return false;
-    }
-    Table *t = e->second;
-
-    while(true)
-	{
-        int i = randomSeat();
-		if (t->seats[i].occupied)
-			continue;
-		
-		t->seats[i].in_round = false;
-		t->seats[i].showcards = false;
-		t->seats[i].bet = 0;
-		t->seats[i].occupied = true;
-
-        p->setTableNo(t->getTableId());
-        p->setSeatNo(i);
-		t->seats[i].player = (Player*)p;
-		
-		log_msg("game", "placing player %d at seat %d", cid, i);
-        break;
-	}
-
-    return true;
-}
-
 bool GameController::rebuy(int cid, chips_type rebuy_stake)
 {
 	Player *p = findPlayer(cid);
@@ -201,95 +147,12 @@ bool GameController::addTimeout(int cid, unsigned int timeout_to_add)
     return true;
 }
 
-bool GameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
-{
-	// is the game full?
-	if (players.size() == max_players)
-		return false;
-	
-	// is the client already a player?
-	if (isPlayer(cid))
-		return false;
-	
-	// remove from spectators list as we would receive the snapshots twice
-	if (isSpectator(cid))
-		removeSpectator(cid);
-	
-	Player *p = new Player;
-	p->client_id = cid;
-	p->setStake(player_stake);
-    p->setTimeout(timeout);
-	
-	// save a copy of the UUID (player might disconnect)
-	p->uuid = uuid;
-	
-	players[cid] = p;
-	
-    if (type == RingGame) {  
-        if (tables.size() < 1) {
-            placeTable(0, getPlayerCount());
-        } else {
-            log_msg("game ", "arranging seat for player %d", cid);
-            if (!arrangeSeat(cid)) {
-                log_msg("game ", "failed to arranging seat for player %d", cid);
-                return false;
-            }
-        }
-    }
-
-	return true;
-}
 
 bool GameController::addPlayer(int cid, const std::string &uuid)
 {
     return addPlayer(cid, uuid, player_stakes);
 }
 
-bool GameController::removePlayer(int cid)
-{
-	if (status == Started && type != RingGame )
-		return false;
-	
-	Player *p = findPlayer(cid);
-	
-	if (!p)
-		return false;
-	
-    if (p->wanna_leave)
-        return true;
-
-    // fold players hole card before remove
-    setPlayerAction(cid, Player::Fold, 0);
-
-    //mark the player wanna_leave instead of removing it
-    p->wanna_leave = true;
-
-	bool bIsOwner = false;
-	if (owner == cid)
-		bIsOwner = true;
-
-	//delete it->second;
-	//players.erase(it);
-	
-	// find a new owner
-	if (bIsOwner)
-		selectNewOwner();
-	
-	return true;
-}
-
-bool GameController::resumePlayer(int cid)
-{
-	Player *p = findPlayer(cid);
-	
-	if (!p)
-		return false;
-	
-    //mark the player wanna_leave instead of removing it
-    p->wanna_leave = false;
-
-	return true;
-}
 bool GameController::isPlayer(int cid) const
 {
 	players_type::const_iterator it = players.find(cid);
@@ -360,46 +223,6 @@ bool GameController::setPlayerStakes(chips_type stake)
 	player_stakes = stake;
 	
 	return true;
-}
-
-bool GameController::getPlayerList(vector<int> &client_list, bool including_wanna_leave) const
-{
-	client_list.clear();
-	
-	for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
-        if (e->second->wanna_leave) {
-            if (including_wanna_leave)
-                client_list.push_back(e->first);
-            continue;
-        } else {
-            client_list.push_back(e->first);
-        }
-    }
-
-    return true;
-}
-
-bool GameController::getPlayerList(vector<string> &client_list) const
-{
-	client_list.clear();
-	
-	for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
-        if (!e->second->wanna_leave) {
-            char tmp[1024];
-            string sp = "";
-            snprintf(tmp, sizeof(tmp),
-                    "%d:%d:%d:%d ",
-                    e->first,
-                    e->second->getTableNo(),
-                    e->second->getSeatNo(),
-                    e->second->getStake());
-
-            sp += tmp;
-            client_list.push_back(sp);
-        }
-    }
-
-    return true;
 }
 
 bool GameController::getListenerList(vector<int> &client_list) const
@@ -565,11 +388,12 @@ void GameController::sendTableSnapshot(Table *t)
 
         char tmp[1024];
         snprintf(tmp, sizeof(tmp),
-                "s%d:%d:%d:%d:%d:%d:%s",
+                "s%d:%d:%d:%d:%d:%d:%d:%s",
                 s->seat_no,
                 p->client_id,
                 pstate,
                 p->stake,
+                p->getRebuyStake(),
                 s->bet,
                 p->last_action,
                 shole.c_str());
@@ -742,52 +566,9 @@ void GameController::dealRiver(Table *t)
     snap(t->table_id, SnapCards, msg);
 }
 
-void GameController::handleRebuy(Table *t)
-{
-    // add rebuy stake to players' stake , this should be called only when table state is Table::EndRound
-    if (t->state != Table::EndRound)
-        return;
-
-    for (players_type::iterator e = players.begin(); e != players.end();)
-    {
-        Player *p = e->second;
-        p->setStake(p->getStake() + p->getRebuyStake());
-        p->setRebuyStake(0); //clear rebuy stake so it wont be added next time
-        if (t->seats[p->getSeatNo()].occupied == false && p->getStake() >= blind.amount) {
-            // player has gone broken and rebought, mark him as occupied so he can join next round
-            t->seats[p->getSeatNo()].occupied = true;
-        }
-        e++;
-    }
-}
-
-void GameController::handleWannaLeave(Table *t)
-{
-    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
-    if (t->state != Table::NewRound || type != RingGame)
-        return;
-
-    for (players_type::iterator e = players.begin(); e != players.end();)
-    {
-        if (e->second->wanna_leave) {
-            log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
-            // remove player from occupied seat
-            t->removePlayer(e->second->getSeatNo());
-
-            delete e->second;
-            players.erase(e);
-        }
-        e++;
-    }
-}
 
 void GameController::stateNewRound(Table *t)
 {
-
-    handleWannaLeave(t);
-    if (t->countPlayers() < 2) 
-        return;
-
     // count up current hand number
     hand_no++;
 
@@ -879,25 +660,6 @@ void GameController::stateNewRound(Table *t)
 
 void GameController::stateBlinds(Table *t)
 {
-    // new blinds level?
-    switch ((int) blind.blindrule)
-    {
-        case BlindByTime:
-            if (difftime(time(NULL), blind.last_blinds_time) > blind.blinds_time)
-            {
-                blind.last_blinds_time = time(NULL);
-                blind.amount = (blind.blinds_factor * blind.amount) / 10;
-
-                // send out blinds snapshot
-                snprintf(msg, sizeof(msg), "%d %d %d", SnapGameStateBlinds, blind.amount / 2, blind.amount);
-                snap(t->table_id, SnapGameState, msg);
-            }
-            break;
-    }
-
-
-    // FIXME: handle non-SNG correctly (ask each player for blinds ...)
-
     t->bet_amount = blind.amount;
 
 
@@ -956,325 +718,6 @@ void GameController::stateBlinds(Table *t)
     sendTableSnapshot(t);
 }
 
-void GameController::stateBetting(Table *t)
-{
-    Player *p = t->seats[t->cur_player].player;
-
-    bool allowed_action = false;  // is action allowed?
-    bool auto_action = false;
-
-    Player::PlayerAction action;
-    chips_type amount = 0;
-
-    chips_type minimum_bet = determineMinimumBet(t);
-
-    if (t->nomoreaction ||		// early showdown, no more action at table possible, or
-            p->stake == 0)		// player is allin and has no more options
-    {
-        action = Player::None;
-        allowed_action = true;
-    }
-    else if (p->next_action.valid)  // has player set an action?
-    {
-        action = p->next_action.action;
-
-        if (action == Player::Fold)
-            allowed_action = true;
-        else if (action == Player::Check)
-        {
-            // allowed to check?
-            if (t->seats[t->cur_player].bet < t->bet_amount)
-                chat(p->client_id, t->table_id, "You cannot check! Try call.");
-            else
-                allowed_action = true;
-        }
-        else if (action == Player::Call)
-        {
-            if (t->bet_amount == 0 || t->bet_amount == t->seats[t->cur_player].bet)
-            {
-                //chat(p->client_id, t->table_id, "You cannot call, nothing was bet! Try check.");
-
-                // retry with this action
-                p->next_action.action = Player::Check;
-                return;
-            }
-            else if (t->bet_amount > t->seats[t->cur_player].bet + p->stake)
-            {
-                // simply convert this action to allin
-                p->next_action.action = Player::Allin;
-                return;
-            }
-            else
-            {
-                allowed_action = true;
-                amount = t->bet_amount - t->seats[t->cur_player].bet;
-            }
-        }
-        else if (action == Player::Bet)
-        {
-            if (t->bet_amount > 0)
-                chat(p->client_id, t->table_id, "You cannot bet, there was already a bet! Try raise.");
-            else if (p->next_action.amount < minimum_bet)
-            {
-                snprintf(msg, sizeof(msg), "You cannot bet this amount. Minimum bet is %d.",
-                        minimum_bet);
-                chat(p->client_id, t->table_id, msg);
-            }
-            else
-            {
-                allowed_action = true;
-                amount = p->next_action.amount - t->seats[t->cur_player].bet;
-            }
-        }
-        else if (action == Player::Raise)
-        {
-            if (t->bet_amount == 0)
-            {
-                //chat(p->client_id, t->table_id, "Err: You cannot raise, nothing was bet! Try bet.");
-
-                // retry with this action
-                p->next_action.action = Player::Bet;
-                return;
-            }
-            else if (p->next_action.amount < minimum_bet)
-            {
-                snprintf(msg, sizeof(msg), "You cannot raise this amount. Minimum bet is %d.",
-                        minimum_bet);
-                chat(p->client_id, t->table_id, msg);
-            }
-            else
-            {
-                allowed_action = true;
-                amount = p->next_action.amount - t->seats[t->cur_player].bet;
-            }
-        }
-        else if (action == Player::Allin)
-        {
-            allowed_action = true;
-            amount = p->stake;
-        }
-
-        // reset player action
-        p->next_action.valid = false;
-    }
-    else
-    { 
-        // handle player timeout
-#ifndef SERVER_TESTING
-        if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > p->getTimeout())
-        {
-            // if player timed out more than 3 times, mark user as wanna leave
-            p->setTimedoutCount(p->getTimedoutCount() + 1);
-            if (p->getTimedoutCount() >= 3) {
-                //mark the player wanna_leave instead of removing it
-                log_msg("game", "player %d timed out more thatn 3 time, marking as sitout", p->getClientId());
-                p->sitout = true;
-                if (type == RingGame) {
-                    p->wanna_leave = true;
-                    log_msg("game", "player %d timed out more thatn 3 time, marking as wanna_leave", p->getClientId());
-                }
-            }
-
-            
-            // auto-action: fold, or check if possible
-            if (t->seats[t->cur_player].bet < t->bet_amount)
-                action = Player::Fold;
-            else
-                action = Player::Check;
-
-            allowed_action = true;
-            auto_action = true;
-        }
-#endif /* SERVER_TESTING */
-    }
-
-
-    // return here if no or invalid action
-    if (!allowed_action) 
-        return;
-
-
-    // remember action for snapshot
-    p->last_action = action;
-
-
-    // perform action
-    if (action == Player::None)
-    {
-        // do nothing
-    }
-    else if (action == Player::Fold)
-    {
-        t->seats[t->cur_player].in_round = false;
-
-        snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionFolded, p->client_id, auto_action ? 1 : 0);
-        snap(t->table_id, SnapPlayerAction, msg);
-    }
-    else if (action == Player::Check)
-    {
-        snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionChecked, p->client_id, auto_action ? 1 : 0);
-        snap(t->table_id, SnapPlayerAction, msg);
-    }
-    else
-    {
-        // player can't bet/raise more than his stake
-        if (amount > p->stake)
-            amount = p->stake;
-
-        // move chips from player's stake to seat-bet
-        t->seats[t->cur_player].bet += amount;
-        p->stake -= amount;
-
-        if (action == Player::Bet || action == Player::Raise || action == Player::Allin)
-        {
-            // only re-open betting round if amount greater than table-bet
-            // FIXME: bug: other players need to do an action even on none-minimum-bet
-            if (t->seats[t->cur_player].bet > t->bet_amount /*&& t->seats[t->cur_player].bet >= minimum_bet*/)
-            {
-                t->last_bet_player = t->cur_player;
-                t->last_bet_amount = t->bet_amount;     // needed for minimum-bet
-                t->bet_amount = t->seats[t->cur_player].bet;
-            }
-
-            if (action == Player::Allin || p->stake == 0)
-                snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionAllin, p->client_id, t->seats[t->cur_player].bet);
-            else if (action == Player::Bet)
-                snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionBet, p->client_id, t->bet_amount);
-            else if (action == Player::Raise)
-                snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionRaised, p->client_id, t->bet_amount);
-        }
-        else
-            snprintf(msg, sizeof(msg), "%d %d %d", SnapPlayerActionCalled, p->client_id, amount);
-
-
-        snap(t->table_id, SnapPlayerAction, msg);
-    }
-
-    // all players except one folded, so end this hand
-    if (t->countActivePlayers() == 1)
-    {
-        // collect bets into pot
-        t->collectBets();
-
-        t->state = Table::AskShow;
-
-        // set last remaining player as current player
-        t->cur_player = t->getNextActivePlayer(t->cur_player);
-
-        // initialize the player's timeout
-        t->timeout_start = time(NULL);
-
-        sendTableSnapshot(t);
-        t->resetLastPlayerActions();
-        return;
-    }
-
-
-    // is next the player who did the last bet/action? if yes, end this betting round
-    if (t->getNextActivePlayer(t->cur_player) == t->last_bet_player)
-    {
-        // collect bets into pot
-        t->collectBets();
-
-
-        // all (or all except one) players are allin
-        if (t->isAllin())
-        {
-            // no further action at table possible
-            t->nomoreaction = true;
-        }
-
-
-        // which betting round is next?
-        switch ((int)t->betround)
-        {
-            case Table::Preflop:
-                t->betround = Table::Flop;
-                dealFlop(t);
-                break;
-
-            case Table::Flop:
-                t->betround = Table::Turn;
-                dealTurn(t);
-                break;
-
-            case Table::Turn:
-                t->betround = Table::River;
-                dealRiver(t);
-                break;
-
-            case Table::River:
-                // last_bet_player MUST show his hand
-                t->seats[t->last_bet_player].showcards = true;
-
-                // set the player behind last action as current player
-                t->cur_player = t->getNextActivePlayer(t->last_bet_player);
-
-                // initialize the player's timeout
-                t->timeout_start = time(NULL);
-
-
-                // end of hand, do showdown/ ask for show
-                if (t->nomoreaction)
-                    t->state = Table::Showdown;
-                else
-                    t->state = Table::AskShow;
-
-                sendTableSnapshot(t);
-
-                t->resetLastPlayerActions();
-                return;
-        }
-
-        // send helper-snapshot // FIXME: do this smarter
-        t->cur_player = -1;	// invalidate current player
-        sendTableSnapshot(t);
-
-
-        // reset the highest bet-amount
-        t->bet_amount = 0;
-        t->last_bet_amount = 0;
-
-        // set current player to SB (or next active behind SB)
-        t->cur_player = t->getNextActivePlayer(t->dealer);
-
-        // re-initialize the player's timeout
-        t->timeout_start = time(NULL);
-
-
-        // first action for next betting round is at this player
-        t->last_bet_player = t->cur_player;
-
-        t->resetLastPlayerActions();
-
-        t->scheduleState(Table::BettingEnd, 2);
-    }
-    else
-    {
-        // preflop: if player on whom the last action was (e.g. UTG) folds,
-        // assign 'last action' to next active player
-        if (action == Player::Fold && t->cur_player == t->last_bet_player)
-            t->last_bet_player = t->getNextActivePlayer(t->last_bet_player);
-
-        // find next player
-        t->cur_player = t->getNextActivePlayer(t->cur_player);
-        t->timeout_start = time(NULL);
-
-        // reset current player's last action
-        p = t->seats[t->cur_player].player;
-        p->resetLastAction();
-
-        t->scheduleState(Table::Betting, 1);
-        sendTableSnapshot(t);
-    }
-
-#if 0
-    // tell player it's his turn
-    p = t->seats[t->cur_player].player;
-    if (!t->nomoreaction && p->stake > 0)
-        snap(p->client_id, t->table_id, SnapPlayerCurrent);
-#endif
-}
 
 void GameController::stateBettingEnd(Table *t)
 {
@@ -1542,80 +985,6 @@ void GameController::stateShowdown(Table *t)
     t->scheduleState(Table::EndRound, 4);
 }
 
-void GameController::stateEndRound(Table *t)
-{
-    multimap<chips_type,unsigned int> broken_players;
-
-    // find broken players
-    for (unsigned int i=0; i < 10; i++)
-    {
-        if (!t->seats[i].occupied)
-            continue;
-
-        Player *p = t->seats[i].player;
-
-        // player has no stake left
-        if (p->stake == 0)
-            broken_players.insert(pair<chips_type,int>(p->stake_before, i));
-        else
-        {
-            // there is a net win
-            if (p->stake > p->stake_before)
-            {
-                snprintf(msg, sizeof(msg), "%d %d %d",
-                        p->client_id,
-                        -1,	/* reserved */
-                        p->stake - p->stake_before);
-                snap(t->table_id, SnapWinAmount, msg);
-            }
-        }
-    }
-
-    // send table snap after rebuy is added into user's stake so buying.avaliable can be updated
-    sendTableSnapshot(t);
-
-    // remove players in right order: sorted by stake_before
-    // FIXME: how to handle players which had the same stake?
-    for (multimap<chips_type,unsigned int>::iterator n = broken_players.begin(); n != broken_players.end(); n++)
-    {
-        //const chips_type stake_before = n->first;
-        const unsigned int seat_num = n->second;
-
-        Player *p = t->seats[seat_num].player;
-
-        // save finish position
-        finish_list.push_back(p);
-
-        // send out player-broke snapshot
-        snprintf(msg, sizeof(msg), "%d %d %d",
-                SnapGameStateBroke,
-                p->client_id,
-                getPlayerCount() - (int)finish_list.size() + 1);
-
-        snap(t->table_id, SnapGameState, msg);
-
-        // mark seat as unused
-        t->seats[seat_num].occupied = false;
-    }
-
-
-    /*
-    if (status == Started) {
-        if (type == RingGame && getPlayerCount() < 2) {  
-            log_msg("game", "game %d is Sit&Go and player count < 2, pausing ", getGameId());
-            pause();
-        }
-    }
-    */
-
-    handleRebuy(t);
-    // determine next dealer
-    t->dealer = t->getNextPlayer(t->dealer);
-
-    t->scheduleState(Table::NewRound, 1);
-
-}
-
 void GameController::stateDelay(Table *t)
 {
 #ifndef SERVER_TESTING
@@ -1624,39 +993,6 @@ void GameController::stateDelay(Table *t)
 #else
     t->delay = 0;
 #endif
-}
-
-int GameController::handleTable(Table *t)
-{
-    if (t->delay)
-    {
-        stateDelay(t);
-        return 0;
-    }
-
-    log_msg("game", "handling table state: %d", t->state);
-    if (t->state == Table::NewRound)
-        stateNewRound(t);
-    else if (t->state == Table::Blinds)
-        stateBlinds(t);
-    else if (t->state == Table::Betting)
-        stateBetting(t);
-    else if (t->state == Table::BettingEnd)
-        stateBettingEnd(t);
-    else if (t->state == Table::AskShow)
-        stateAskShow(t);
-    else if (t->state == Table::AllFolded)
-        stateAllFolded(t);
-    else if (t->state == Table::Showdown)
-        stateShowdown(t);
-    else if (t->state == Table::EndRound)
-        stateEndRound(t);
-
-    // only 1 player left in SNG or MTT game? close table
-    if (t->countPlayers() == 1 and type != RingGame)
-        return -1;
-
-    return 0;
 }
 
 void GameController::placeTable(int offset, int total_players)
@@ -1780,38 +1116,6 @@ vector<int> GameController::calcTables(int players_to_arrange)
     return tables;
 }
 
-void GameController::placePlayers()
-{
-    if ((type == SNG || type == RingGame) && tables.size() < 1 ) { //SNT or SitAndGo
-        placeTable(0, getPlayerCount());
-    } else if (type == FreezeOut) { //MTT
-        vector<int> tables = calcTables(getPlayerCount());
-
-        int offset = 0;
-        for (size_t i = 0; i < tables.size(); i++) {
-            placeTable(offset, tables[i]);
-            offset += tables[i];
-        }
-    }
-}
-
-void GameController::start()
-{
-    // at least 2 players needed
-    if (status == Started 
-     || (type != RingGame && players.size() < 2))
-        return;
-
-    placePlayers();
-
-    blind.amount = blind.start;
-    blind.last_blinds_time = time(NULL);
-
-    log_msg("game", "game %d has been started", game_id);
-    status = Started;
-    started_time = time(NULL);
-}
-
 void GameController::pause()
 {
     if (status != Started)
@@ -1836,82 +1140,4 @@ void GameController::resume()
 
     status = Started;
     log_msg("game", "game %d has been resumed", game_id);
-}
-
-int GameController::tick()
-{
-    if (status != Started)
-    {
-
-        if ( (getPlayerCount() == max_players && type == SNG)// for SNG, start game if player count reached
-                ||(getPlayerCount() >= 1 && type == RingGame) )  {// for Sit&Go , start game if player count >= 1
-            log_msg("game", "starting game %d", getGameId());
-            start();
-        }
-        else if (!getPlayerCount() && !getRestart())  // delete game if no players registered
-            return -1;
-        else	// nothing to do, exit early
-            return 0;
-    }
-    else if (status == Ended || status == Expired)
-    {
-        log_msg("game", "game %d is ended ", getGameId());
-        // delay before game gets deleted
-        if ((unsigned int) difftime(time(NULL), ended_time) >= 1 * 60)
-        {
-            return -1;
-        }
-        else
-            return 1;
-    }
-    else if (status == Paused)
-    {
-        log_msg("game", "game %d is paused ", getGameId());
-        return 0;
-    }
-
-    // handle all tables
-    for (tables_type::iterator e = tables.begin(); e != tables.end();)
-    {
-        Table *t = e->second;
-
-        // table closed?
-        if (handleTable(t) < 0)
-        {
-            // is this the last table?  /* FIXME: very very dirty */
-            if (tables.size() == 1)
-            {
-                status = Ended;
-                ended_time = time(NULL);
-
-                snprintf(msg, sizeof(msg), "%d", SnapGameStateEnd);
-                snap(-1, SnapGameState, msg);
-
-                // push back last remaining player to finish_list
-                for (unsigned int i=0; i < 10; ++i)
-                    if (t->seats[i].occupied)
-                    {
-                        finish_list.push_back(t->seats[i].player);
-                        break;
-                    }
-            }
-
-            delete t;
-            tables.erase(e++);
-        }
-        else
-            ++e;
-    }
-
-
-    // handle expiration
-    if (difftime(time(NULL), started_time) >= expire_in && type == RingGame) { // SNT & MTT games don't expire
-        status = Ended;
-        ended_time = time(NULL);
-
-        snprintf(msg, sizeof(msg), "%d", SnapGameStateEnd);
-        snap(-1, SnapGameState, msg);
-    }
-
-    return 0;
 }

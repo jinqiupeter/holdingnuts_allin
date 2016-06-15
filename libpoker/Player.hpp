@@ -35,6 +35,8 @@ typedef unsigned int chips_type;
 class Player
 {
 friend class GameController;
+friend class SitAndGoGameController;
+friend class SNGGameController;
 friend class TestCaseGameController;
 
 public:

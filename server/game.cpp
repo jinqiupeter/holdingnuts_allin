@@ -1328,7 +1328,6 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		{
 			ginfo.type = Tokenizer::string2int(infoarg);
 			
-			// TODO: support cash game (RingGame)
 			if (ginfo.type != GameController::SNG 
              && ginfo.type != GameController::FreezeOut
              && ginfo.type != GameController::RingGame)
@@ -1418,24 +1417,28 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 	
 	if (!cmderr)
 	{
-		GameController *g = new GameController();
+		GameController *g = NULL;
+        if (ginfo.type == GameController::RingGame) {
+            g = new SitAndGoGameController();
+            ((SitAndGoGameController*)g)->setExpireIn(ginfo.expire_in);
+
+        } else if (ginfo.type == GameController::SNG) {
+            g = new SNGGameController();
+        }
+
         const int gid = ginfo.game_id;
 		g->setGameId(gid);
-		g->setGameType((GameController::GameType)ginfo.type);
 		g->setPlayerMax(ginfo.max_players);
 		g->setPlayerTimeout(ginfo.timeout);
 		g->setPlayerStakes(ginfo.stake);
 		g->addPlayer(client->id, client->uuid);
 		g->setOwner(client->id);
 		g->setName(ginfo.name);
-        if (ginfo.type == GameController::RingGame)  
-            g->setBlindRule(GameController::BlindNone); // Sit&Go games dont raise blinds
 		g->setBlindsStart(ginfo.blinds_start);
 		g->setBlindsFactor(ginfo.blinds_factor);
 		g->setBlindsTime(ginfo.blinds_time);
 		g->setPassword(ginfo.password);
 		g->setRestart(ginfo.restart);
-		g->setExpireIn(ginfo.expire_in);
 		games[gid] = g;
 		
 		log_msg("game", "%s (%d) created game %d",

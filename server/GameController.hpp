@@ -83,9 +83,9 @@ public:
 	
 	GameController();
 	GameController(const GameController& g);
-	~GameController();
+	virtual ~GameController();
 	
-	void reset();
+	virtual void reset();
 	
 	bool setGameId(int gid) { game_id = gid; return true; };
 	int getGameId() const { return game_id; };
@@ -94,7 +94,7 @@ public:
     void setGameType(GameType game_type) { type = game_type; };
 	
 	GameStatus getGameStatus() const { return status; };
-    void setGameType(GameStatus game_status) { status = game_status; };
+    void setGameStatus(GameStatus game_status) { status = game_status; };
 
 	void setPlayerTimeout(unsigned int respite) { timeout = respite; };
 	unsigned int getPlayerTimeout() const { return timeout; };
@@ -123,16 +123,14 @@ public:
 	unsigned int getPlayerMax() const { return max_players; };
 	unsigned int getPlayerCount() const { return players.size(); };
 	
-	bool getPlayerList(std::vector<int> &client_list, bool including_wanna_leave = false) const;
-	bool getPlayerList(std::vector<std::string> &client_list) const;
+	virtual bool getPlayerList(std::vector<int> &client_list, bool including_wanna_leave = false) const {return true;};
+	virtual bool getPlayerList(std::vector<std::string> &client_list) const {return true;};
 	bool getListenerList(std::vector<int> &client_list) const;
 	void getFinishList(std::vector<Player*> &player_list) const;
 	
 	void setRestart(bool bRestart) { restart = bRestart; };
 	bool getRestart() const { return restart; };
 
-    void setExpireIn(int iExpireIn) { expire_in = iExpireIn; };
-    int getExpireIn() const { return expire_in; };
 	
 	bool isStarted() const { return status == Started; };
 	bool isCreated() const { return status == Created; };
@@ -142,14 +140,12 @@ public:
 	bool isFinished() const { return status == Finished; };
 	void setFinished() { status = Finished; };
 	
-    void handleWannaLeave(Table *t);
-    void handleRebuy(Table *t);
-    bool arrangeSeat(int cid);
+    virtual void handleRebuy(Table *t) {return;};
     bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);
-    bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
-	bool removePlayer(int cid);
-	bool resumePlayer(int cid);
+    virtual bool addPlayer(int cid, const std::string &uuid, chips_type player_stake){return true;};
+	virtual bool removePlayer(int cid) {return true;};
+	virtual bool resumePlayer(int cid) {return true;};
 	bool isPlayer(int cid) const;
     bool addTimeout(int cid, unsigned int timeout_to_add);
 	
@@ -165,14 +161,13 @@ public:
 	
 	bool setPlayerAction(int cid, Player::PlayerAction action, chips_type amount);
 	
-	void start();
+	virtual void start() {return ;};
     void pause();
     void resume();
 	
-	int tick();
+	virtual int tick() {return 0;};
 	
 	
-protected:
 	Player* findPlayer(int cid);
 	void selectNewOwner();
 	
@@ -182,15 +177,15 @@ protected:
 	bool createWinlist(Table *t, std::vector< std::vector<HandStrength> > &winlist);
 	chips_type determineMinimumBet(Table *t) const;
 	
-	int handleTable(Table *t);
-	void stateNewRound(Table *t);
-	void stateBlinds(Table *t);
-	void stateBetting(Table *t);
+	virtual int handleTable(Table *t) {return 0;};
+	virtual void stateNewRound(Table *t) ;
+	virtual void stateBlinds(Table *t) ;
+	virtual void stateBetting(Table *t) {return;};
 	void stateBettingEnd(Table *t);   // pseudo-state
 	void stateAskShow(Table *t);
 	void stateAllFolded(Table *t);
 	void stateShowdown(Table *t);
-	void stateEndRound(Table *t);
+	virtual void stateEndRound(Table *t) {return ;};
 	
 	// pseudo-state for delays
 	void stateDelay(Table *t);
@@ -203,12 +198,11 @@ protected:
 	void sendTableSnapshot(Table *t);
 	void sendPlayerShowSnapshot(Table *t, Player *p);
 	
-    void placePlayers();
+    virtual void placePlayers() {return;};
     void placeTable(int offset, int total_players);
     std::vector<int> calcTables(int players_to_arrange);
 
       
-private:
 	int game_id;
 	
     time_t started_time;
@@ -241,12 +235,13 @@ private:
 	
 	time_t ended_time;
 
-    int expire_in;  // game is expiring in expire_in seconds
 	
 	finish_list_type finish_list;
 	
 	std::string name;
 	std::string password;
+
+    int tid;
 	
 #ifdef DEBUG
 	std::vector<Card> debug_cards;

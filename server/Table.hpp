@@ -34,6 +34,8 @@
 class Table
 {
 friend class GameController;
+friend class SitAndGoGameController;
+friend class SNGGameController;
 friend class TestCaseGameController;
 
 public:
