@@ -56,6 +56,8 @@ SitAndGoGameController::SitAndGoGameController()
     setName("game");
     setPassword("");
     setOwner(-1);
+
+    addBlindLevels();
 }
 
 SitAndGoGameController::SitAndGoGameController(const GameController& g)
@@ -73,7 +75,10 @@ SitAndGoGameController::SitAndGoGameController(const GameController& g)
 	setBlindsFactor(g.getBlindsFactor());
 	setBlindsTime(g.getBlindsTime());
 	setPassword(g.getPassword());
+
+    addBlindLevels();
 }
+
 
 SitAndGoGameController::~SitAndGoGameController()
 {
@@ -84,6 +89,7 @@ SitAndGoGameController::~SitAndGoGameController()
 		players.erase(e++);
 	}
 }
+
 
 void SitAndGoGameController::reset()
 {

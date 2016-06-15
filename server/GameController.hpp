@@ -80,6 +80,12 @@ public:
 		SplitLimit,
 		FixedLimit
 	} LimitRule;
+
+	typedef struct {
+		int level;
+		chips_type big_blind;
+		chips_type ante;
+	} BlindLevel;
 	
 	GameController();
 	GameController(const GameController& g);
@@ -202,6 +208,7 @@ public:
     void placeTable(int offset, int total_players);
     std::vector<int> calcTables(int players_to_arrange);
 
+    virtual void addBlindLevels() ;
       
 	int game_id;
 	
@@ -226,8 +233,10 @@ public:
 		unsigned int blinds_time;  // seconds
 		time_t last_blinds_time;
 		unsigned int blinds_factor;
+        size_t level;
 	} blind;
 	
+
 	unsigned int hand_no;
 	
 	int owner;   // owner of a game
@@ -242,6 +251,8 @@ public:
 	std::string password;
 
     int tid;
+
+    std::vector<BlindLevel> blind_levels;
 	
 #ifdef DEBUG
 	std::vector<Card> debug_cards;

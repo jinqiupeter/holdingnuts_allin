@@ -56,6 +56,8 @@ SNGGameController::SNGGameController()
     setName("game");
     setPassword("");
     setOwner(-1);
+
+    addBlindLevels();
 }
 
 SNGGameController::SNGGameController(const GameController& g)
@@ -73,6 +75,8 @@ SNGGameController::SNGGameController(const GameController& g)
 	setBlindsFactor(g.getBlindsFactor());
 	setBlindsTime(g.getBlindsTime());
 	setPassword(g.getPassword());
+
+    addBlindLevels();
 }
 
 SNGGameController::~SNGGameController()
@@ -85,28 +89,45 @@ SNGGameController::~SNGGameController()
 	}
 }
 
+void SNGGameController::addBlindLevels()
+{
+    int big_blinds[] = {20, 30, 50, 100, 200, 400, 600, 800, 1000, 1200, 1600, 2000, 
+        3000, 4000, 6000, 8000, 10000, 12000, 16000, 20000, 24000, 30000, 40000,
+        60000, 80000, 100000};
+
+    for (size_t i = 0; i < sizeof(big_blinds); i++ ) {
+        BlindLevel blind_level;
+        blind_level.level = i + 1;
+        blind_level.big_blind = big_blinds[i];
+        blind_level.ante = 0;
+        blind_levels.push_back(blind_level);
+    }
+    
+    blind.level = 1;
+}
+
 void SNGGameController::reset()
 {
-	game_id = -1;
-	
-	type = SNG;
-	blind.blindrule = BlindByTime;	
-	
+    game_id = -1;
+
+    type = SNG;
+    blind.blindrule = BlindByTime;	
+
     status = Created;
-	hand_no = 0;
-	
-	// remove all players
-	for (players_type::iterator e = players.begin(); e != players.end();)
-	{
-		delete e->second;
-		players.erase(e++);
-	}
-	
-	// remove all spectators
-	spectators.clear();
-	
-	// clear finish list
-	finish_list.clear();
+    hand_no = 0;
+
+    // remove all players
+    for (players_type::iterator e = players.begin(); e != players.end();)
+    {
+        delete e->second;
+        players.erase(e++);
+    }
+
+    // remove all spectators
+    spectators.clear();
+
+    // clear finish list
+    finish_list.clear();
 }
 
 
@@ -116,29 +137,29 @@ bool SNGGameController::addPlayer(int cid, const std::string &uuid, chips_type p
     if (status == Started)
         return false;
 
-	// is the game full?
-	if (players.size() == max_players)
-		return false;
-	
-	// is the client already a player?
-	if (isPlayer(cid))
-		return false;
-	
-	// remove from spectators list as we would receive the snapshots twice
-	if (isSpectator(cid))
-		removeSpectator(cid);
-	
-	Player *p = new Player;
-	p->client_id = cid;
-	p->setStake(player_stake);
+    // is the game full?
+    if (players.size() == max_players)
+        return false;
+
+    // is the client already a player?
+    if (isPlayer(cid))
+        return false;
+
+    // remove from spectators list as we would receive the snapshots twice
+    if (isSpectator(cid))
+        removeSpectator(cid);
+
+    Player *p = new Player;
+    p->client_id = cid;
+    p->setStake(player_stake);
     p->setTimeout(timeout);
-	
-	// save a copy of the UUID (player might disconnect)
-	p->uuid = uuid;
-	
-	players[cid] = p;
-	
-	return true;
+
+    // save a copy of the UUID (player might disconnect)
+    p->uuid = uuid;
+
+    players[cid] = p;
+
+    return true;
 }
 
 bool SNGGameController::removePlayer(int cid)
@@ -168,9 +189,9 @@ bool SNGGameController::removePlayer(int cid)
 
 bool SNGGameController::getPlayerList(vector<int> &client_list, bool including_wanna_leave) const
 {
-	client_list.clear();
-	
-	for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
+    client_list.clear();
+
+    for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
         client_list.push_back(e->first);
     }
 
@@ -179,8 +200,8 @@ bool SNGGameController::getPlayerList(vector<int> &client_list, bool including_w
 
 bool SNGGameController::getPlayerList(vector<string> &client_list) const
 {
-	client_list.clear();
-	
+    client_list.clear();
+
     for (players_type::const_iterator e = players.begin(); e != players.end(); e++) {
         char tmp[1024];
         string sp = "";
@@ -225,21 +246,45 @@ void SNGGameController::stateNewRound(Table *t)
 
 void SNGGameController::stateBlinds(Table *t)
 {
+    int next_level = 0;
+    int next_amount = 0;
+    if (blind.level < blind_levels.size()) {
+        next_level = blind.level + 1;
+        next_amount = blind_levels[next_level].big_blind;
+    }
+
     // new blinds level?
     switch ((int) blind.blindrule)
     {
         case BlindByTime:
-            if (difftime(time(NULL), blind.last_blinds_time) > blind.blinds_time)
+            if (difftime(time(NULL), blind.last_blinds_time) > blind.blinds_time && blind.level < blind_levels.size() )
             {
                 blind.last_blinds_time = time(NULL);
-                blind.amount = (blind.blinds_factor * blind.amount) / 10;
+                BlindLevel blind_level = blind_levels[++blind.level];
+                blind.amount = blind_level.big_blind;
 
-                // send out blinds snapshot
-                snprintf(msg, sizeof(msg), "%d %d %d", SnapGameStateBlinds, blind.amount / 2, blind.amount);
-                snap(t->table_id, SnapGameState, msg);
+                if (blind.level < blind_levels.size()) {
+                    next_level = blind.level + 1;
+                    next_amount = blind_levels[next_level].big_blind;
+                } else {
+                    next_level = 0;
+                    next_amount = 0;
+                }
+
             }
             break;
     }
+
+    // send out blinds snapshot
+    snprintf(msg, sizeof(msg), "%d %d %d %d %d %d %d", 
+            SnapGameStateBlinds, 
+            blind.amount / 2, 
+            blind.amount, 
+            (int)blind.level, 
+            next_level, 
+            next_amount, 
+            (int)blind.last_blinds_time);
+    snap(t->table_id, SnapGameState, msg);
 
     GameController::stateBlinds(t);
 }
@@ -358,7 +403,7 @@ void SNGGameController::stateBetting(Table *t)
                 log_msg("game", "player %d timed out more thatn 3 time, marking as sitout", p->getClientId());
             }
 
-            
+
             // auto-action: fold, or check if possible
             if (t->seats[t->cur_player].bet < t->bet_amount)
                 action = Player::Fold;

@@ -70,6 +70,7 @@ public:
 	void start() ;
 	int tick();
 	
+    void addBlindLevels();
 private:
 };
 

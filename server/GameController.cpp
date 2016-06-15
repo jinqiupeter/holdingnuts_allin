@@ -59,12 +59,15 @@ GameController::GameController()
 	blind.blinds_time = 60 * 4;
 	blind.blinds_factor = 20;
 	blind.start = 10;
+    blind.level = 1;
 	
 	name = "game";
 	password = "";
 	owner = -1;
 
     tid = -1;
+
+    addBlindLevels();
 }
 
 GameController::GameController(const GameController& g)
@@ -82,7 +85,10 @@ GameController::GameController(const GameController& g)
 	setBlindsFactor(g.getBlindsFactor());
 	setBlindsTime(g.getBlindsTime());
 	setPassword(g.getPassword());
+
+    addBlindLevels();
 }
+
 
 GameController::~GameController()
 {
@@ -92,6 +98,18 @@ GameController::~GameController()
 		delete e->second;
 		players.erase(e++);
 	}
+}
+
+void GameController::addBlindLevels()
+{
+    BlindLevel blind_level;
+    blind_level.level = 1;
+    blind_level.big_blind = getBlindsStart();
+    blind_level.ante = 0;
+    
+    blind_levels.push_back(blind_level);
+
+    blind.level = 1;
 }
 
 void GameController::reset()
@@ -449,6 +467,13 @@ void GameController::sendTableSnapshot(Table *t)
     else
         minimum_bet = 0;
 
+    int next_level = 0;
+    int next_amount = 0;
+    if (blind.level < blind_levels.size()) {
+        next_level = blind.level + 1;
+        next_amount = blind_levels[next_level].big_blind;
+    }
+
 
     snprintf(msg, sizeof(msg),
             "%d:%d "           // <state>:<betting-round>
@@ -457,6 +482,10 @@ void GameController::sendTableSnapshot(Table *t)
             "%s "              // seats
             "%s "              // pots
             "%d "              // current big blind amount
+            "%d "              // current blind level
+            "%d "              // next big blind amount
+            "%d "              // next blind level
+            "%d "              // last blind time
             "%d",              // minimum bet
             t->state, (t->state == Table::Betting) ? t->betround : -1,
             sturn.c_str(),
@@ -464,6 +493,10 @@ void GameController::sendTableSnapshot(Table *t)
             sseats.c_str(),
             spots.c_str(),
             blind.amount,
+            (int)blind.level,
+            next_amount,
+            next_level,
+            (int)blind.last_blinds_time,
             minimum_bet);
 
     snap(t->table_id, SnapTable, msg);
