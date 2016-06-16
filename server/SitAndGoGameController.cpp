@@ -786,13 +786,7 @@ int SitAndGoGameController::tick()
     else if (status == Ended || status == Expired)
     {
         log_msg("game", "game %d is ended ", getGameId());
-        // delay before game gets deleted
-        if ((unsigned int) difftime(time(NULL), ended_time) >= 1 * 60)
-        {
-            return -1;
-        }
-        else
-            return 1;
+        return -1;
     }
     else if (status == Paused)
     {
