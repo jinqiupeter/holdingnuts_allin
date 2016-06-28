@@ -396,10 +396,14 @@ void SNGGameController::stateBetting(Table *t)
 #ifndef SERVER_TESTING
         if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > p->getTimeout())
         {
+            if (!p->sitout) {
+                p->setTimedoutCount(p->getTimedoutCount() + 1);
+            }
+
             // if player timed out more than 3 times, mark user as sitout
-            p->setTimedoutCount(p->getTimedoutCount() + 1);
             if (p->getTimedoutCount() >= 3) {
                 p->sitout = true;
+                p->setTimedoutCount(0);
                 log_msg("game", "player %d timed out more thatn 3 time, marking as sitout", p->getClientId());
             }
 
@@ -733,8 +737,6 @@ int SNGGameController::tick()
             log_msg("game", "starting Sit&Go game %d", getGameId());
             start();
         }
-        else if (!getPlayerCount() && !getRestart())  // delete game if no players registered (after creater left the game)
-            return -1;
         else	// nothing to do, exit early
             return 0;
     }

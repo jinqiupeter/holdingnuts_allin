@@ -1431,7 +1431,6 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		g->setPlayerMax(ginfo.max_players);
 		g->setPlayerTimeout(ginfo.timeout);
 		g->setPlayerStakes(ginfo.stake);
-		g->addPlayer(client->id, client->uuid);
 		g->setOwner(client->id);
 		g->setName(ginfo.name);
 		g->setBlindsStart(ginfo.blinds_start);

@@ -778,8 +778,6 @@ int SitAndGoGameController::tick()
             log_msg("game", "starting Sit&Go game %d", getGameId());
             start();
         }
-        else if (!getPlayerCount() && !getRestart())  // delete game if no players registered
-            return -1;
         else	// nothing to do, exit early
             return 0;
     }
