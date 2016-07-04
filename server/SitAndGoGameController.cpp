@@ -772,7 +772,7 @@ void SitAndGoGameController::start()
 
 int SitAndGoGameController::tick()
 {
-    if (status != Started)
+    if (status == Created)
     {
         if ( getPlayerCount() >= 1)   {// for Sit&Go , start game if player count >= 1
             log_msg("game", "starting Sit&Go game %d", getGameId());
