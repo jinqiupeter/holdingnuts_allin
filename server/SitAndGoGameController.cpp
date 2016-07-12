@@ -659,6 +659,9 @@ void SitAndGoGameController::stateEndRound(Table *t)
 {
     multimap<chips_type,unsigned int> broken_players;
 
+    // assemble stake string
+    string sstake;
+
     // find broken players
     for (unsigned int i=0; i < 10; i++)
     {
@@ -666,6 +669,15 @@ void SitAndGoGameController::stateEndRound(Table *t)
             continue;
 
         Player *p = t->seats[i].player;
+
+        // assemble stake string
+        char tmp[1024];
+        snprintf(tmp, sizeof(tmp), "%d:%d:%d",
+                p->client_id,
+                p->stake,
+                p->stake - p->stake_before);
+        sstake += tmp;
+        sstake += ' ';
 
         // player has no stake left
         if (p->stake == 0)
@@ -683,6 +695,9 @@ void SitAndGoGameController::stateEndRound(Table *t)
             }
         }
     }
+
+    // send stake change
+    snap(t->table_id, SnapStakeChange, sstake.c_str());
 
     sendTableSnapshot(t);
 
