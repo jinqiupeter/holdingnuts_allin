@@ -104,6 +104,12 @@ public:
 
 	void setPlayerTimeout(unsigned int respite) { timeout = respite; };
 	unsigned int getPlayerTimeout() const { return timeout; };
+
+	void setAnte(unsigned int val) { ante = val; };
+	unsigned int getAnte() const { return ante;  };
+
+	void setEnforceStraddle(bool val) { enforce_straddle = val; };
+	bool getEnforceStraddle() const { return enforce_straddle; };
 	
 	void setBlindsStart(chips_type blinds_start) { blind.start = blinds_start; };
 	chips_type getBlindsStart() const { return blind.start; };
@@ -235,6 +241,9 @@ public:
 		unsigned int blinds_factor;
         size_t level;
 	} blind;
+
+	unsigned int ante;
+	bool enforce_straddle;
 	
 
 	unsigned int hand_no;

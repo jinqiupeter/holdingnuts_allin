@@ -290,13 +290,20 @@ void SitAndGoGameController::handleRebuy(Table *t)
     if (t->state != Table::NewRound)
         return;
 
+	chips_type amount = blind.amount;
+	if (ante > 0)
+	{
+		amount += blind.amount / 10 * ante;
+	}
+
     for (players_type::iterator e = players.begin(); e != players.end();)
     {
         Player *p = e->second;
         p->setStake(p->getStake() + p->getRebuyStake());
         p->setRebuyStake(0); //clear rebuy stake so it wont be added next time
 
-        if (t->seats[p->getSeatNo()].occupied == false && p->getStake() >= blind.amount) {
+		if (t->seats[p->getSeatNo()].occupied == false && p->getStake() >= amount)
+		{
             // player has gone broken and rebought, mark him as occupied so he can join next round
             t->seats[p->getSeatNo()].occupied = true;
         }
@@ -336,6 +343,23 @@ void SitAndGoGameController::stateNewRound(Table *t)
 
 void SitAndGoGameController::stateBlinds(Table *t)
 {
+	// ante
+	chips_type ante_amount = 0;
+
+	if (ante > 0)
+	{
+		ante_amount = blind.amount / 10 * ante;
+		for (unsigned int i = 0; i < 10; ++i)
+		{
+			if (!t->seats[i].occupied)
+				continue;
+
+			Player *p = t->seats[i].player;
+			t->seats[i].bet = ante_amount;
+			p->stake -= ante_amount;
+		}
+	}
+
     GameController::stateBlinds(t);
 }
 
@@ -680,7 +704,13 @@ void SitAndGoGameController::stateEndRound(Table *t)
         sstake += ' ';
 
         // player has no stake left
-        if (p->stake == 0)
+		int need_stake = 0;
+		if (ante > 0)
+		{
+			need_stake = blind.amount / 10 * ante;
+		}
+
+		if (p->stake == 0 || p->stake < need_stake)
             broken_players.insert(pair<chips_type,int>(p->stake_before, i));
         else
         {
@@ -764,7 +794,8 @@ int SitAndGoGameController::handleTable(Table *t)
 
 void SitAndGoGameController::placePlayers()
 {
-    if (tables.size() < 1 ) { 
+    if (tables.size() < 1 ) 
+	{ 
         placeTable(0, getPlayerCount());
     } 
 }

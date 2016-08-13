@@ -121,6 +121,9 @@ void GameController::reset()
 	
     status = Created;
 	hand_no = 0;
+
+	ante = 0;
+	enforce_straddle = false;
 	
 	// remove all players
 	for (players_type::iterator e = players.begin(); e != players.end();)
@@ -371,7 +374,6 @@ void GameController::sendTableSnapshot(Table *t)
         if (i < cards.size() -1)
             scards += ':';
     }
-
 
     // assemble seats string
     string sseats;
@@ -695,10 +697,8 @@ void GameController::stateBlinds(Table *t)
 {
     t->bet_amount = blind.amount;
 
-
     Player *pSmall = t->seats[t->sb].player;
     Player *pBig = t->seats[t->bb].player;
-
 
     // set the player's SB
     chips_type amount = blind.amount / 2;
@@ -706,9 +706,8 @@ void GameController::stateBlinds(Table *t)
     if (amount > pSmall->stake)
         amount = pSmall->stake;
 
-    t->seats[t->sb].bet = amount;
+    t->seats[t->sb].bet += amount;
     pSmall->stake -= amount;
-
 
     // set the player's BB
     amount = blind.amount;
@@ -716,7 +715,7 @@ void GameController::stateBlinds(Table *t)
     if (amount > pBig->stake)
         amount = pBig->stake;
 
-    t->seats[t->bb].bet = amount;
+    t->seats[t->bb].bet += amount;
     pBig->stake -= amount;
 
     // initialize the player's timeout
@@ -1036,7 +1035,8 @@ void GameController::placeTable(int offset, int total_players)
     vector<Player*> rndseats;
 
     players_type::const_iterator start = players.begin();
-    for (int i = 0; i < offset; i++) {
+    for (int i = 0; i < offset; i++) 
+	{
         start++;
     }
 
@@ -1053,11 +1053,12 @@ void GameController::placeTable(int offset, int total_players)
     random_shuffle(rndseats.begin(), rndseats.end());
 #endif
 
-    for (unsigned int i=0; i < 10; i++) {
+    for (unsigned int i=0; i < 10; i++)
+	{
         Table::Seat *seat = &(t->seats[i]);
         seat->seat_no = i;
         seat->occupied = false;
-    }
+	}
 
     bool chose_dealer = false;
 

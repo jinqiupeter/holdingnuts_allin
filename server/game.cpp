@@ -575,7 +575,7 @@ bool send_gameinfo(clientcon *client, int gid)
 		state = GameStateWaiting;
 	
 	snprintf(msg, sizeof(msg),
-		"GAMEINFO %d %d:%d:%d:%d:%d:%d:%d:%d %d:%d:%d \"%s\"",
+		"GAMEINFO %d %d:%d:%d:%d:%d:%d:%d:%d %d:%d:%d:%d:%d \"%s\"",
 		gid,
 		(int) GameTypeHoldem,
 		game_mode,
@@ -592,6 +592,8 @@ bool send_gameinfo(clientcon *client, int gid)
 		g->getBlindsStart(),
 		g->getBlindsFactor(),
 		g->getBlindsTime(),
+ 		g->getAnte(),
+ 		(g->getEnforceStraddle() ? 1 : 0),
 		g->getName().c_str());
 	
 	send_msg(client->sock, msg);
@@ -944,11 +946,15 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 	
 	if (g->isPlayer(client->id) )
 	{
-        if (g->getGameType() == GameController::RingGame) {
-            if(!g->resumePlayer(client->id)) {
+        if (g->getGameType() == GameController::RingGame)
+		{
+            if(!g->resumePlayer(client->id)) 
+			{
                 send_err(client, 0 /*FIXME*/, "Could not resume player");
                 return 1;
-            } else {
+            } 
+			else 
+			{
                 send_ok_game(gid, client);
                 // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
                 send_gameinfo(client, gid);
@@ -956,7 +962,9 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
                 send_playerlist_all(gid);
                 return 0;
             }
-        } else {
+        } 
+		else 
+		{
             send_err(client, 0 /*FIXME*/, "you are already registered");
             return 1;
         }
@@ -1293,6 +1301,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		chips_type blinds_start;
 		unsigned int blinds_factor;
 		unsigned int blinds_time;
+		unsigned int ante;
+		bool enforce_straddle;
 		string password;
 		bool restart;
         int expire_in;
@@ -1306,6 +1316,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		20,
 		20,
 		180,
+		0,
+		false,
 		"",
 		false,
         30 * 60,
@@ -1392,6 +1404,17 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 			if (ginfo.blinds_time < 30 || ginfo.blinds_time > 30*60)
 				cmderr = true;
 		}
+		else if (infotype == "ante" && havearg)
+		{
+			ginfo.ante = Tokenizer::string2int(infoarg);
+
+			if (ginfo.ante < 0 || ginfo.ante > 10)
+				cmderr = true;
+		}
+		else if (infotype == "enforce_straddle" && havearg)
+		{
+			ginfo.enforce_straddle = Tokenizer::string2int(infoarg) ? 1 : 0;
+		}
 		else if (infotype == "password" && havearg)
 		{
 			if (infoarg.length() > 16)
@@ -1436,6 +1459,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		g->setBlindsStart(ginfo.blinds_start);
 		g->setBlindsFactor(ginfo.blinds_factor);
 		g->setBlindsTime(ginfo.blinds_time);
+		g->setAnte(ginfo.ante);
+		g->setEnforceStraddle(ginfo.enforce_straddle);
 		g->setPassword(ginfo.password);
 		g->setRestart(ginfo.restart);
 		games[gid] = g;
