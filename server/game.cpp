@@ -593,7 +593,7 @@ bool send_gameinfo(clientcon *client, int gid)
 		g->getBlindsFactor(),
 		g->getBlindsTime(),
  		g->getAnte(),
- 		(g->getEnforceStraddle() ? 1 : 0),
+		(g->getMandatoryStraddle() ? 1 : 0),
 		g->getName().c_str());
 	
 	send_msg(client->sock, msg);
@@ -1302,7 +1302,7 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		unsigned int blinds_factor;
 		unsigned int blinds_time;
 		unsigned int ante;
-		bool enforce_straddle;
+		bool mandatory_straddle;
 		string password;
 		bool restart;
         int expire_in;
@@ -1411,9 +1411,9 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 			if (ginfo.ante < 0 || ginfo.ante > 10)
 				cmderr = true;
 		}
-		else if (infotype == "enforce_straddle" && havearg)
+		else if (infotype == "mandatory_straddle" && havearg)
 		{
-			ginfo.enforce_straddle = Tokenizer::string2int(infoarg) ? 1 : 0;
+			ginfo.mandatory_straddle = Tokenizer::string2int(infoarg) ? 1 : 0;
 		}
 		else if (infotype == "password" && havearg)
 		{
@@ -1460,7 +1460,7 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		g->setBlindsFactor(ginfo.blinds_factor);
 		g->setBlindsTime(ginfo.blinds_time);
 		g->setAnte(ginfo.ante);
-		g->setEnforceStraddle(ginfo.enforce_straddle);
+		g->setMandatoryStraddle(ginfo.mandatory_straddle);
 		g->setPassword(ginfo.password);
 		g->setRestart(ginfo.restart);
 		games[gid] = g;

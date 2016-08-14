@@ -123,7 +123,7 @@ void GameController::reset()
 	hand_no = 0;
 
 	ante = 0;
-	enforce_straddle = false;
+	mandatory_straddle = false;
 	
 	// remove all players
 	for (players_type::iterator e = players.begin(); e != players.end();)

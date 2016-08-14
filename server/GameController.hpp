@@ -108,8 +108,8 @@ public:
 	void setAnte(unsigned int val) { ante = val; };
 	unsigned int getAnte() const { return ante;  };
 
-	void setEnforceStraddle(bool val) { enforce_straddle = val; };
-	bool getEnforceStraddle() const { return enforce_straddle; };
+	void setMandatoryStraddle(bool val) { mandatory_straddle = val; };
+	bool getMandatoryStraddle() const { return mandatory_straddle; };
 	
 	void setBlindsStart(chips_type blinds_start) { blind.start = blinds_start; };
 	chips_type getBlindsStart() const { return blind.start; };
@@ -243,7 +243,7 @@ public:
 	} blind;
 
 	unsigned int ante;
-	bool enforce_straddle;
+	bool mandatory_straddle;
 	
 
 	unsigned int hand_no;
