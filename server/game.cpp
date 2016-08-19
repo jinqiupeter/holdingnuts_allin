@@ -1254,6 +1254,41 @@ int client_cmd_action(clientcon *client, Tokenizer &t)
 	return 0;
 }
 
+int client_cmd_nextroundstraddle(clientcon *client, Tokenizer &t)
+{
+	if (!t.count())
+	{
+		send_err(client, ErrParameters);
+		return 1;
+	}
+
+	int gid;
+	t >> gid;
+
+	GameController *g = get_game_by_id(gid);
+	if (!g)
+	{
+		send_err(client, 0 /*FIXME*/, "game does not exist");
+		return 1;
+	}
+
+	if (!g->isPlayer(client->id))
+	{
+		send_err(client, 0 /*FIXME*/, "you are not registered");
+		return 1;
+	}
+
+	if (!g->nextRoundStraddle(client->id))
+	{
+		send_err(client, 0 /*FIXME*/, "unable to rebuy");
+		return 1;
+	}
+
+	log_msg("client ", "player %d next round straddle", client->id);
+
+	return 0;
+}
+
 int client_cmd_create(clientcon *client, Tokenizer &t)
 {
 	if (!config.getBool("perm_create_user") && !(client->state & Authed))
@@ -1261,7 +1296,6 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		send_err(client, ErrNoPermission, "no permission");
 		return 1;
 	}
-	
 	
 	// check for server games count limit
 	if (games.size() >= (unsigned int) config.getInt("max_games"))
@@ -1287,7 +1321,6 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 			}
 		}
 	}
-	
 	
 	bool cmderr = false;
 	
@@ -1631,6 +1664,8 @@ int client_execute(clientcon *client, const char *cmd)
 		return client_cmd_auth(client, t);
 	else if (command == "CONFIG")
 		return client_cmd_config(client, t);
+	else if (command == "STRADDLE")
+		return client_cmd_nextroundstraddle(client, t);
 	else if (command == "QUIT")
 	{
 		send_ok(client);

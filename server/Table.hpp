@@ -81,6 +81,7 @@ public:
 	int getTableId() { return table_id; };
 	
 	int getNextPlayer(unsigned int pos);
+	int getPrePlayer(unsigned int pos);
 	int getNextActivePlayer(unsigned int pos);
 	unsigned int countPlayers();
 	unsigned int countActivePlayers();
@@ -115,7 +116,7 @@ private:
 	BettingRound betround;
 	
 	Seat seats[10];
-	int dealer, sb, bb;
+	int dealer, sb, bb, last_straddle;
 	int cur_player;
 	int last_bet_player;
 	

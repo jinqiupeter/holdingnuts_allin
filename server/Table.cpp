@@ -33,6 +33,7 @@ using namespace std;
 Table::Table()
 {
 	table_id = -1;
+	last_straddle = -1;
 }
 
 int Table::getNextPlayer(unsigned int pos)
@@ -56,6 +57,30 @@ int Table::getNextPlayer(unsigned int pos)
 		
 	} while (!found);
 	
+	return cur;
+}
+
+int Table::getPrePlayer(unsigned int pos)
+{
+	unsigned int start = pos;
+	unsigned int cur = pos;
+	bool found = false;
+
+	do
+	{
+		cur -= 1;
+		if (cur < 0)
+			cur = 9;
+
+		// no active player left
+		if (start == cur)
+			return -1;
+
+		if (seats[cur].occupied)
+			found = true;
+
+	} while (!found);
+
 	return cur;
 }
 

@@ -311,39 +311,8 @@ void SitAndGoGameController::handleRebuy(Table *t)
     }
 }
 
-void SitAndGoGameController::handleWannaLeave(Table *t)
+void SitAndGoGameController::handleAnte(Table *t)
 {
-    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
-    if (t->state != Table::NewRound)
-        return;
-
-    for (players_type::iterator e = players.begin(); e != players.end();)
-    {
-        if (e->second->wanna_leave) {
-            log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
-            // remove player from occupied seat
-            t->removePlayer(e->second->getSeatNo());
-
-            delete e->second;
-            players.erase(e);
-        }
-        e++;
-    }
-}
-
-void SitAndGoGameController::stateNewRound(Table *t)
-{
-    handleRebuy(t);
-    handleWannaLeave(t);
-    if (t->countPlayers() < 2) 
-        return;
-
-    GameController::stateNewRound(t);
-}
-
-void SitAndGoGameController::stateBlinds(Table *t)
-{
-	// ante
 	chips_type ante_amount = 0;
 
 	if (ante > 0)
@@ -359,8 +328,97 @@ void SitAndGoGameController::stateBlinds(Table *t)
 			p->stake -= ante_amount;
 		}
 	}
+}
+
+void SitAndGoGameController::handleStraddle(Table *t)
+{
+	if (t->last_straddle != -1)
+	{
+		chips_type amount = blind.amount;
+		int seat_index = t->bb;
+		do
+		{
+			amount *= 2;
+			seat_index = t->getNextPlayer(seat_index);
+			Player * pPlayer = t->seats[seat_index].player;
+			if (pPlayer->stake < amount)
+			{
+				// break the straddle chain
+				t->last_straddle = t->getPrePlayer(seat_index);
+				break;
+			}
+			t->seats[seat_index].bet += amount;
+			pPlayer->stake -= amount;
+		} while (seat_index != t->last_straddle);
+	}
+
+	// set next round straddle
+	if (this->mandatory_straddle)
+	{
+		int next_rount_bb = t->getNextPlayer(t->bb);
+		t->last_straddle = t->getNextPlayer(next_rount_bb);
+	}
+	else
+		t->last_straddle = -1;
+}
+
+void SitAndGoGameController::handleWannaLeave(Table *t)
+{
+    // remove players whose wanna_leave is 1, this should be called only when table state is Table::NewRound
+    if (t->state != Table::NewRound)
+        return;
+	bool someone_leave = false;
+    for (players_type::iterator e = players.begin(); e != players.end();)
+    {
+        if (e->second->wanna_leave) {
+            log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
+            // remove player from occupied seat
+            t->removePlayer(e->second->getSeatNo());
+
+            delete e->second;
+            players.erase(e);
+			someone_leave = true;
+        }
+        e++;
+    }
+
+	if (t->countPlayers() <= 3)
+	{
+		t->last_straddle = -1;
+		return;
+	}
+
+	if (someone_leave)
+	{
+		if (this->mandatory_straddle)
+		{ 
+			int bb;
+			int sb;
+			bb = t->getNextPlayer(t->dealer);
+			sb = t->getNextPlayer(bb);
+			t->last_straddle = t->getNextPlayer(sb);
+		}
+	}
+}
+
+void SitAndGoGameController::stateNewRound(Table *t)
+{
+    handleRebuy(t);
+    handleWannaLeave(t);
+    if (t->countPlayers() < 2) 
+        return;
+
+    GameController::stateNewRound(t);
+}
+
+void SitAndGoGameController::stateBlinds(Table *t)
+{
+	handleAnte(t);
+	handleStraddle(t);
 
     GameController::stateBlinds(t);
+
+	handleWantToStraddleNextRound(t);
 }
 
 void SitAndGoGameController::stateBetting(Table *t)
@@ -881,4 +939,117 @@ int SitAndGoGameController::tick()
     }
 
     return 0;
+}
+
+bool SitAndGoGameController::nextRoundStraddle(int cid)
+{
+	Player *p = findPlayer(cid);
+	if (!p)
+		return false;
+
+	// Sit&Go games should always have only one table
+	tables_type::iterator e = tables.begin();
+	if (e == tables.end())
+	{
+		log_msg("arrangeSeat", "no table found");
+		return false;
+	}
+	Table *t = e->second;
+
+	if (t->state > Table::Blinds && t->state < Table::EndRound)
+	{
+		int min_player_count = 4;
+		if (getMandatoryStraddle())
+			min_player_count = 5;
+
+		if (t->countPlayers() < min_player_count)
+		{
+			log_msg("nextroundstraddle", "count of player must more than %d", min_player_count - 1);
+			return false;
+		}
+
+		if (t->last_straddle == -1)
+		{
+			int pos = t->getNextPlayer(t->bb);
+			pos = t->getNextPlayer(pos);
+			if (getMandatoryStraddle())
+				pos = t->getNextPlayer(pos);
+
+			if (p == t->seats[pos].player)
+			{
+				t->last_straddle = pos;
+			}
+			else
+			{
+				log_msg("nextroundstraddle", "the player straddled was not at correct position");
+				return false;
+			}
+		}
+		else
+		{
+			if (t->last_straddle == t->dealer)
+			{
+				log_msg("nextroundstraddle", "all players have been straddled");
+				return false;
+			}
+			int pos = t->getNextPlayer(t->last_straddle);
+			if (p == t->seats[pos].player)
+			{
+				t->last_straddle = pos;
+			}
+			else
+			{
+				log_msg("nextroundstraddle", "the player straddled was not at correct position");
+				return false;
+			}
+		}
+	}
+	else
+	{
+		log_msg("nextroundstraddle", "is not in the correct table state");
+		return false;
+	}
+
+	if (t->last_straddle != t->dealer)
+	{
+		int pos = t->getNextPlayer(t->last_straddle);
+		
+		snap(t->seats[pos].player->client_id, t->table_id, SnapWantToStraddleNextRound);
+	}
+	
+	return true;
+}
+
+void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
+{
+	int min_player_count = 4;
+	if (getMandatoryStraddle())
+		min_player_count = 5;
+
+	if (t->countPlayers() < min_player_count)
+	{
+		return;
+	}
+
+	int cid = 0;
+	if (t->last_straddle == -1)
+	{
+		int pos = t->getNextPlayer(t->bb);
+		pos = t->getNextPlayer(pos);
+		if (getMandatoryStraddle())
+			pos = t->getNextPlayer(pos);
+		
+		cid = t->seats[pos].player->client_id;
+	}
+	else
+	{
+		if (t->last_straddle == t->dealer)
+		{
+			return;
+		}
+		int pos = t->getNextPlayer(t->last_straddle);
+		cid = t->seats[pos].player->client_id;
+	}
+
+	snap(cid, t->table_id, SnapWantToStraddleNextRound);
 }

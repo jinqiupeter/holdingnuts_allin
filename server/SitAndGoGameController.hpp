@@ -55,6 +55,8 @@ public:
 	
 	bool getPlayerList(std::vector<int> &client_list, bool including_wanna_leave = false) const;
 	bool getPlayerList(std::vector<std::string> &client_list) const;
+
+	bool nextRoundStraddle(int cid);
 	
 	void stateNewRound(Table *t) ;
     void stateBetting(Table *t);
@@ -64,7 +66,10 @@ public:
     void placePlayers();
 	
     void handleWannaLeave(Table *t);
+	void handleWantToStraddleNextRound(Table *t);
     void handleRebuy(Table *t);
+	void handleAnte(Table *t);
+	void handleStraddle(Table *t);
     bool arrangeSeat(int cid);
     bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);

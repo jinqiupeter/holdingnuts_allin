@@ -329,7 +329,6 @@ bool GameController::setPlayerAction(int cid, Player::PlayerAction action, chips
         p->sitout = false;
         return true;
     }
-
     p->next_action.valid = true;
     p->next_action.action = action;
     p->next_action.amount = amount;
@@ -686,7 +685,6 @@ void GameController::stateNewRound(Table *t)
     // player under the gun
     t->cur_player = t->getNextPlayer(t->bb);
     t->last_bet_player = t->cur_player;
-
 
     sendTableSnapshot(t);
 
