@@ -55,6 +55,7 @@ typedef enum {
 	SnapFoyer		= 0x10,
 	SnapRespite		= 0x11,
     SnapStakeChange = 0x12,
+	SnapWantToStraddleNextRound = 0x13,
 } snaptype;
 
 //! \brief Snapshot gamestate types
