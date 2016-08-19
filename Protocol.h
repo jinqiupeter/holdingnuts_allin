@@ -24,6 +24,9 @@
 #ifndef _PROTOCOL_H
 #define _PROTOCOL_H
 
+
+ 
+
 typedef enum {
 	GameTypeHoldem = 0x1
 } gametype;
