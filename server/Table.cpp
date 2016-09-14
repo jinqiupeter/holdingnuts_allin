@@ -29,11 +29,13 @@
 
 using namespace std;
 
-
 Table::Table()
 {
 	table_id = -1;
 	last_straddle = -1;
+	suspend_times = 0;
+	max_suspend_times = 0;
+	suspend_reason = NoReason;
 }
 
 int Table::getNextPlayer(unsigned int pos)
@@ -329,4 +331,22 @@ void Table::scheduleState(State sched_state, unsigned int delay_sec)
     state = sched_state;
     delay = delay_sec;
     delay_start = time(NULL);
+}
+
+void Table::clearInsuraceInfo()
+{
+	for (unsigned int i = 0; i < countActivePlayers(); i++)
+	{
+		Player *p = seats[dealer].player;
+		for (unsigned int j = 0; j < 2; ++j)
+		{
+			p->insuraceInfo[j].bought = false;
+			p->insuraceInfo[j].buy_amount = 0;
+			p->insuraceInfo[j].max_payment = 0;
+			p->insuraceInfo[j].buy_cards.clear();
+			p->insuraceInfo[j].outs.clear();
+			p->insuraceInfo[j].every_single_outs.clear();
+			p->insuraceInfo[j].res_amount = 0;
+		}
+	}
 }

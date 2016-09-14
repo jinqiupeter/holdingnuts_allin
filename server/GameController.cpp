@@ -604,6 +604,7 @@ void GameController::dealRiver(Table *t)
 void GameController::stateNewRound(Table *t)
 {
     // count up current hand number
+	t->clearInsuraceInfo();
     hand_no++;
 
     snprintf(msg, sizeof(msg), "%d %d", SnapGameStateNewHand, hand_no);
@@ -1172,4 +1173,38 @@ void GameController::resume()
 
     status = Started;
     log_msg("game", "game %d has been resumed", game_id);
+}
+
+void GameController::stateSuspend(Table *t)
+{
+	if (t->suspend_times == 0)
+	{
+		snprintf(msg, sizeof(msg), "%d %d %d", SnapGameStateTableSuspend, t->suspend_reason, t->max_suspend_times - t->suspend_times);
+		snap(t->table_id, SnapGameState, msg);
+	}
+
+	if (t->suspend_times >= t->max_suspend_times)
+	{
+		t->scheduleState(Table::Resume, 0);
+		return;
+	}
+
+	++t->suspend_times;
+	t->scheduleState(Table::Suspend, 1);
+}
+
+void GameController::stateResume(Table * t)
+{
+	snprintf(msg, sizeof(msg), "%d", SnapGameStateTableResume);
+	snap(t->table_id, SnapGameState, msg);
+
+	t->suspend_times = 0;
+	t->max_suspend_times = 0;
+	t->suspend_reason = Table::NoReason;
+	t->scheduleState(t->resume_state, 0);
+}
+
+bool GameController::handleBuyInsurance(Table *t, unsigned int round)
+{
+	return false;
 }

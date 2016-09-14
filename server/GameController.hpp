@@ -110,7 +110,7 @@ public:
 
 	void setMandatoryStraddle(bool val) { mandatory_straddle = val; };
 	bool getMandatoryStraddle() const { return mandatory_straddle; };
-	
+
 	void setBlindsStart(chips_type blinds_start) { blind.start = blinds_start; };
 	chips_type getBlindsStart() const { return blind.start; };
 	void setBlindsFactor(unsigned int blinds_factor) { blind.blinds_factor = blinds_factor; };
@@ -155,10 +155,12 @@ public:
     virtual void handleRebuy(Table *t) {return;};
     bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);
+	virtual bool clientBuyInsurance(int cid, int buy_amount, std::vector<Card> & cards) {return false; };
 	virtual bool nextRoundStraddle(int cid) { return false; };
     virtual bool addPlayer(int cid, const std::string &uuid, chips_type player_stake){return true;};
 	virtual bool removePlayer(int cid) {return true;};
 	virtual bool resumePlayer(int cid) {return true;};
+	virtual bool handleBuyInsurance(Table *t, unsigned int round);
 	bool isPlayer(int cid) const;
     bool addTimeout(int cid, unsigned int timeout_to_add);
 	
@@ -191,6 +193,8 @@ public:
 	chips_type determineMinimumBet(Table *t) const;
 	
 	virtual int handleTable(Table *t) {return 0;};
+	virtual void stateSuspend(Table *t);
+	virtual void stateResume(Table * t);
 	virtual void stateNewRound(Table *t) ;
 	virtual void stateBlinds(Table *t) ;
 	virtual void stateBetting(Table *t) {return;};

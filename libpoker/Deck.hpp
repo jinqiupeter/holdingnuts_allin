@@ -42,6 +42,8 @@ public:
 	void debugRemoveCard(Card card);
 	void debugPushCards(const std::vector<Card> *cardsvec);
 	void debug();
+
+	void load();
 	
 private:
 	std::vector<Card> cards;

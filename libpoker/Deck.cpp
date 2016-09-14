@@ -70,6 +70,7 @@ bool Deck::pop(Card &card)
 bool Deck::shuffle()
 {
 	random_shuffle(cards.begin(), cards.end());
+	load();
 	return true;
 }
 
@@ -94,4 +95,63 @@ void Deck::debugPushCards(const vector<Card> *cardsvec)
 {
 	for (vector<Card>::const_iterator e = cardsvec->begin(); e != cardsvec->end(); e++)
 		push(*e);
+}
+
+void Deck::load()
+{
+	FILE *f = NULL;
+	fopen_s(&f, "cards", "rb");
+	if (!f)
+	{
+		return;
+	}
+	vector<char> v;
+	while (!feof(f))
+	{
+		char c;
+		fread(&c, 1, 1, f);
+
+		if (c != '2'
+			&& c != '3'
+			&& c != '4'
+			&& c != '5'
+			&& c != '6'
+			&& c != '7'
+			&& c != '8'
+			&& c != '9'
+			&& c != 'T'
+			&& c != 'J'
+			&& c != 'Q'
+			&& c != 'K'
+			&& c != 'A'
+			)
+		{
+			continue;
+		}
+
+		v.push_back(c);
+	}
+
+	vector<Card> vc;
+
+	for (size_t i = 0; i < v.size(); ++i)
+	{
+		vector<Card>::iterator it = cards.begin();
+		while (it != cards.end())
+		{
+			Card card = *it;
+			if (card.getFaceSymbol() == v[i])
+			{
+				cards.erase(it);
+				vc.push_back(card);
+				break;
+			}
+			++it;
+		}
+	}
+
+	for (size_t i = 0; i < vc.size(); ++i)
+	{
+		cards.push_back(vc[vc.size() - i - 1]);
+	}
 }

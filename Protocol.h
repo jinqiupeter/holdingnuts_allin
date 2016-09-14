@@ -24,9 +24,6 @@
 #ifndef _PROTOCOL_H
 #define _PROTOCOL_H
 
-
- 
-
 typedef enum {
 	GameTypeHoldem = 0x1
 } gametype;
@@ -59,6 +56,7 @@ typedef enum {
 	SnapRespite		= 0x11,
     SnapStakeChange = 0x12,
 	SnapWantToStraddleNextRound = 0x13,
+	SnapBuyInsurance = 0x14,
 } snaptype;
 
 //! \brief Snapshot gamestate types
@@ -73,6 +71,8 @@ typedef enum {
 	SnapGameStateExpire	= 0x12,
 	SnapGameStatePause	= 0x13,
 	SnapGameStateResume	= 0x14,
+	SnapGameStateTableSuspend = 0x15,
+	SnapGameStateTableResume = 0x16,
 } snap_gamestate_type;
 
 //! \brief Snapshot cards types

@@ -59,20 +59,22 @@ bool GameLogic::getStrength(const HoleCards *hole, const CommunityCards *communi
 bool GameLogic::getStrength(vector<Card> *allcards, HandStrength *strength)
 {
 	HandStrength::Ranking *r = &(strength->ranking);
+	strength->allcards.clear();
+	strength->allcards.insert(strength->allcards.end(), allcards->begin(), allcards->end());
 	vector<Card> *rank = &(strength->rank);
 	vector<Card> *kicker = &(strength->kicker);
-	
+
 	// sort them descending
 	sort(allcards->begin(), allcards->end(), greater<Card>());
-	
+
 #if 0
 	print_cards("AllCards", &allcards);
 #endif
-	
+
 	// clear rank and kicker
 	rank->clear();
 	kicker->clear();
-	
+
 	// test for all combinations
 	if (isFlush(allcards, rank) && isStraight(allcards, rank->front().getSuit(), rank))
 		*r = HandStrength::StraightFlush;
@@ -83,7 +85,7 @@ bool GameLogic::getStrength(vector<Card> *allcards, HandStrength *strength)
 	else if (isFlush(allcards, rank))
 		*r = HandStrength::Flush;
 	else if (isStraight(allcards, -1, rank))
-		*r = HandStrength:: Straight;
+		*r = HandStrength::Straight;
 	else if (isXOfAKind(allcards, 3, rank, kicker))
 		*r = HandStrength::ThreeOfAKind;
 	else if (isTwoPair(allcards, rank, kicker))
@@ -93,22 +95,29 @@ bool GameLogic::getStrength(vector<Card> *allcards, HandStrength *strength)
 	else
 	{
 		*r = HandStrength::HighCard;
-		
+
 		rank->clear();
 		rank->push_back(allcards->front());
-		
+
 		kicker->clear();
 		for (vector<Card>::iterator e = allcards->begin() + 1; e != allcards->end() && kicker->size() < 4; e++)
 			kicker->push_back(*e);
 	}
-	
+
 #if 0
 	log_msg("getStrength", "Strength: %s", HandStrength::getRankingName(*r));
 	print_cards("Rank", rank);
 	print_cards("Kicker", kicker);
 #endif
-	
+
 	return true;
+}
+
+bool GameLogic::getStrength(Card newCard, HandStrength *strength)
+{
+	vector<Card> allcard = strength->allcards;
+	allcard.push_back(newCard);
+	return getStrength(&allcard, strength);
 }
 
 bool GameLogic::isTwoPair(std::vector<Card> *allcards, std::vector<Card> *rank, std::vector<Card> *kicker)
@@ -331,6 +340,72 @@ bool GameLogic::getWinList(vector<HandStrength> &hands, vector< vector<HandStren
 	} while (true);
 	
 	return true;
+}
+
+
+bool GameLogic::getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card>> *every_single_outs)
+{
+	while (deck.count() > 0)
+	{
+		Card c;
+		deck.pop(c);
+
+		HandStrength w_hands = *winner_hands;
+		GameLogic::getStrength(c, &w_hands);
+		std::vector<HandStrength> l_hands = *loser_hands;
+		for (size_t i = 0; i < l_hands.size(); ++i)
+		{
+			GameLogic::getStrength(c, &l_hands[i]);
+
+			if (l_hands[i] > w_hands)
+			{
+				if (outs)
+				{
+					bool find = false;
+					for (size_t j = 0; j < outs->size(); ++j)
+					{
+						if ((*outs)[j].getFace() == c.getFace() && (*outs)[j].getSuit() == c.getSuit())
+						{
+							find = true;
+							break;
+						}
+					}
+					if (find == false)
+					{
+						outs->push_back(c);
+					}
+				}
+
+				if (every_single_outs)
+				{
+					bool find = false;
+					for (size_t j = 0; j < (*every_single_outs)[l_hands[i].getId()].size(); ++j)
+					{
+						if ((*every_single_outs)[l_hands[i].getId()][j].getFace() == c.getFace() && (*every_single_outs)[l_hands[i].getId()][j].getSuit() == c.getSuit())
+						{
+							find = true;
+							break;
+						}
+					}
+
+					(*every_single_outs)[l_hands[i].getId()].push_back(c);
+				}
+			}
+		}
+	}
+	return true;
+}
+
+bool GameLogic::cardInList(Card card, std::vector<Card>* cards)
+{
+	for (size_t i = 0; i < cards->size(); ++ i)
+	{
+		if (cards->at(i).getFace() == card.getFace() && cards->at(i).getSuit() == card.getSuit())
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 const char* HandStrength::getRankingName(Ranking r)

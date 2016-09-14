@@ -49,7 +49,9 @@ public:
 		AskShow,
 		AllFolded,
 		Showdown,
-		EndRound
+		EndRound,
+		Suspend,
+		Resume
 	} State;
 	
 	typedef enum {
@@ -58,6 +60,11 @@ public:
 		Turn,
 		River
 	} BettingRound;
+
+	typedef enum {
+		NoReason,
+		BuyInsurace
+	} SuspendReason;
 	
 	typedef struct {
 		bool occupied;
@@ -94,8 +101,9 @@ public:
 	unsigned int getInvolvedInPotCount(Pot *pot, std::vector<HandStrength> &wl);
 	
 	void scheduleState(State sched_state, unsigned int delay_sec);
-	
 	void tick();
+
+	void clearInsuraceInfo();
 	
 private:
 	int table_id;
@@ -104,7 +112,14 @@ private:
 	CommunityCards communitycards;
 	
 	State state;
-	
+
+	State resume_state;
+
+	SuspendReason suspend_reason;
+
+	unsigned int suspend_times;
+	unsigned int max_suspend_times;
+
 	// Delay state
 	time_t delay_start;
 	unsigned int delay;

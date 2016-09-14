@@ -25,6 +25,8 @@
 #define _PLAYER_H
 
 #include <string>
+#include <map>
+#include <set>
 
 #include "HoleCards.hpp"
 
@@ -38,6 +40,7 @@ friend class GameController;
 friend class SitAndGoGameController;
 friend class SNGGameController;
 friend class TestCaseGameController;
+friend class Table;
 
 public:
 	typedef enum {
@@ -63,6 +66,23 @@ public:
 		PlayerAction action;
 		chips_type amount;
 	} SchedAction;
+
+	typedef struct {
+		// 是否已购买
+		bool bought;
+		// 购买保险最大赔付
+		chips_type max_payment;
+		// 购买金额
+		chips_type buy_amount;
+		// outs
+		std::vector<Card> outs;
+		// 对手outs
+		std::map<int, std::vector<Card>> every_single_outs;
+		// 购买的outs
+		std::vector<Card> buy_cards;
+		// 结算扣钱
+		chips_type res_amount;
+	}InsuranceInfo;
 	
 	Player();
 	
@@ -111,7 +131,8 @@ private:
     int seat_no;
     int timedout_count; // if player timed out > 3 times, mark player as wanna_leave
     unsigned int timeout; //each user has different timeout, to support buy timeout
+	InsuranceInfo insuraceInfo[2];
 };
 
-
 #endif /* _PLAYER_H */
+

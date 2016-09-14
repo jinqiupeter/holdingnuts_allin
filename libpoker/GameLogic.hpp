@@ -25,10 +25,13 @@
 #define _GAMELOGIC_H
 
 #include <vector>
+#include <map>
+#include <set>
 
 #include "Card.hpp"
 #include "HoleCards.hpp"
 #include "CommunityCards.hpp"
+#include "Deck.hpp"
 
 class HandStrength
 {
@@ -46,7 +49,7 @@ public:
 		FourOfAKind,
 		StraightFlush
 	} Ranking;
-	
+
 	Ranking getRanking() const { return ranking; };
 	static const char* getRankingName(Ranking r);
 	
@@ -64,6 +67,7 @@ private:
 	Ranking ranking;
 	std::vector<Card> rank;
 	std::vector<Card> kicker;
+	std::vector<Card> allcards;
 	
 	int id;  // identifier; can be used for associating player
 };
@@ -75,7 +79,8 @@ public:
 	
 	static bool getStrength(std::vector<Card> *allcards, HandStrength *strength);
 	static bool getStrength(const HoleCards *hole, const CommunityCards *community, HandStrength *strength);
-	
+	static bool getStrength(Card newCard, HandStrength *strength);
+
 	static bool isTwoPair(std::vector<Card> *allcards, std::vector<Card> *rank, std::vector<Card> *kicker);
 	static bool isStraight(std::vector<Card> *allcards, const int suit, std::vector<Card> *rank);
 	static bool isFlush(std::vector<Card> *allcards, std::vector<Card> *rank);
@@ -83,6 +88,8 @@ public:
 	static bool isFullHouse(std::vector<Card> *allcards, std::vector<Card> *rank);
 	
 	static bool getWinList(std::vector<HandStrength> &hands, std::vector< std::vector<HandStrength> > &winlist);
+	static bool getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card>> *every_single_outs);
+	static bool cardInList(Card card, std::vector<Card>* cards);
 };
 
 

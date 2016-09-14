@@ -1280,11 +1280,57 @@ int client_cmd_nextroundstraddle(clientcon *client, Tokenizer &t)
 
 	if (!g->nextRoundStraddle(client->id))
 	{
-		send_err(client, 0 /*FIXME*/, "unable to rebuy");
+		send_err(client, 0 /*FIXME*/, "unable to straddle");
 		return 1;
 	}
 
 	log_msg("client ", "player %d next round straddle", client->id);
+
+	return 0;
+}
+
+int client_cmd_buy_insurance(clientcon *client, Tokenizer &t)
+{
+	if (t.count() < 3)
+	{
+		send_err(client, ErrParameters);
+		return 1;
+	}
+
+	int gid;
+	t >> gid;
+
+	int buy_amount;
+	t >> buy_amount;
+
+	string scard;
+	vector<Card> cards;
+	while (t.getNext(scard))
+	{
+		Card card(scard.c_str());
+		cards.push_back(card);
+	}
+
+	GameController *g = get_game_by_id(gid);
+	if (!g)
+	{
+		send_err(client, 0 /*FIXME*/, "game does not exist");
+		return 1;
+	}
+
+	if (!g->isPlayer(client->id))
+	{
+		send_err(client, 0 /*FIXME*/, "you are not registered");
+		return 1;
+	}
+
+	if (!g->clientBuyInsurance(client->id, buy_amount, cards))
+	{
+		send_err(client, 0 /*FIXME*/, "unable to buy insurance");
+		return 1;
+	}
+
+	log_msg("client ", "player %d buy insurance", client->id);
 
 	return 0;
 }
@@ -1666,6 +1712,8 @@ int client_execute(clientcon *client, const char *cmd)
 		return client_cmd_config(client, t);
 	else if (command == "STRADDLE")
 		return client_cmd_nextroundstraddle(client, t);
+	else if (command == "BUYINSURANCE")
+		return client_cmd_buy_insurance(client, t);
 	else if (command == "QUIT")
 	{
 		send_ok(client);

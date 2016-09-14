@@ -30,6 +30,7 @@
 #include <set>
 #include <string>
 #include <ctime>
+#include <map>
 
 #include "Card.hpp"
 #include "Deck.hpp"
@@ -51,6 +52,8 @@ public:
 	SitAndGoGameController(const GameController& g);
 	~SitAndGoGameController();
 	
+	void initInsuranceRate();
+
     void reset();
 	
 	bool getPlayerList(std::vector<int> &client_list, bool including_wanna_leave = false) const;
@@ -62,6 +65,8 @@ public:
     void stateBetting(Table *t);
     void stateBlinds(Table *t);
 	void stateEndRound(Table *t);
+	void stateShowdown(Table *t);
+	void stateResume(Table * t);
 	int handleTable(Table *t) ;
     void placePlayers();
 	
@@ -70,6 +75,9 @@ public:
     void handleRebuy(Table *t);
 	void handleAnte(Table *t);
 	void handleStraddle(Table *t);
+	bool handleBuyInsurance(Table *t, unsigned int round);
+	void handleInsuranceBenefits(Table *t, unsigned int round);
+	bool clientBuyInsurance(int cid, chips_type buy_amount, std::vector<Card> & cards);
     bool arrangeSeat(int cid);
     bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);
@@ -83,6 +91,7 @@ public:
 	
 private:
     int expire_in;  // game is expiring in expire_in seconds
+	std::map<unsigned, float> insurance_rate;
 };
 
 #endif /* _SITANDGOGAMECONTROLLER_H */
