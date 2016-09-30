@@ -88,8 +88,9 @@ public:
 	static bool isFullHouse(std::vector<Card> *allcards, std::vector<Card> *rank);
 	
 	static bool getWinList(std::vector<HandStrength> &hands, std::vector< std::vector<HandStrength> > &winlist);
-	static bool getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card>> *every_single_outs);
-	static bool cardInList(Card card, std::vector<Card>* cards);
+	static bool getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card> > *every_single_outs);
+    static bool getInsuranceOutsDivided(HandStrength* winner_hands, std::vector<HandStrength> &hands, std::vector< std::vector<HandStrength> > *ori_winlist, Deck deck, std::vector<Card> *outs_divided);
+    static bool cardInList(Card card, std::vector<Card>* cards);
 };
 
 

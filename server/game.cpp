@@ -1310,27 +1310,22 @@ int client_cmd_buy_insurance(clientcon *client, Tokenizer &t)
 		Card card(scard.c_str());
 		cards.push_back(card);
 	}
-
 	GameController *g = get_game_by_id(gid);
 	if (!g)
 	{
 		send_err(client, 0 /*FIXME*/, "game does not exist");
 		return 1;
 	}
-
 	if (!g->isPlayer(client->id))
 	{
 		send_err(client, 0 /*FIXME*/, "you are not registered");
 		return 1;
 	}
-
 	if (!g->clientBuyInsurance(client->id, buy_amount, cards))
 	{
 		send_err(client, 0 /*FIXME*/, "unable to buy insurance");
 		return 1;
 	}
-
-	log_msg("client ", "player %d buy insurance", client->id);
 
 	return 0;
 }
@@ -1672,7 +1667,7 @@ int client_execute(clientcon *client, const char *cmd)
 	// get command argument
 	const string command = t.getNext();
 	
-	
+	//log_msg("client execute", "cmd = %s", command.c_str());
 	if (!(client->state & Introduced))  // state: not introduced
 	{
 		if (command == "PCLIENT")

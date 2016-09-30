@@ -343,7 +343,7 @@ bool GameLogic::getWinList(vector<HandStrength> &hands, vector< vector<HandStren
 }
 
 
-bool GameLogic::getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card>> *every_single_outs)
+bool GameLogic::getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStrength> *loser_hands, Deck deck, std::vector<Card> *outs, std::map<int, std::vector<Card> > *every_single_outs)
 {
 	while (deck.count() > 0)
 	{
@@ -387,14 +387,53 @@ bool GameLogic::getInsuranceOuts(HandStrength* winner_hands, std::vector<HandStr
 							break;
 						}
 					}
-
-					(*every_single_outs)[l_hands[i].getId()].push_back(c);
+                    if (!find)
+					    (*every_single_outs)[l_hands[i].getId()].push_back(c);
 				}
 			}
 		}
 	}
 	return true;
 }
+
+bool GameLogic::getInsuranceOutsDivided(HandStrength* winner_hands, std::vector<HandStrength> &hands, std::vector< std::vector<HandStrength> > *ori_winlist, Deck deck, std::vector<Card> *outs_divided)
+{
+    while (deck.count() > 0)
+    {
+        Card c;
+        deck.pop(c);
+
+        std::vector<HandStrength> hs;
+        for (size_t i = 0; i < hands.size(); ++ i)
+        {
+            HandStrength hand = hands[i];
+            GameLogic::getStrength(c, &hand);
+            hs.push_back(hand);
+        }
+
+        vector< vector<HandStrength> > winlist;
+        GameLogic::getWinList(hs, winlist);
+
+        if (winlist[0].size() > (*ori_winlist)[0].size())
+        {
+            bool find = false;
+            for (size_t i = 0; i < winlist[0].size(); ++ i)
+            {
+                if (winlist[0].at(i).getId() == winner_hands->getId())
+                {
+                    find = true;
+                    break;
+                }
+            }
+            if (find)
+            {
+                outs_divided->push_back(c);
+            }
+        }
+    }
+    return true;
+}
+
 
 bool GameLogic::cardInList(Card card, std::vector<Card>* cards)
 {

@@ -26,6 +26,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include <math.h>
 
 #include "Config.h"
 #include "Logger.h"
@@ -340,12 +341,12 @@ void SitAndGoGameController::handleStraddle(Table *t)
 		do
 		{
 			amount *= 2;
-			seat_index = t->getNextPlayer(seat_index);
+			seat_index = t->getNextActivePlayer(seat_index);
 			Player * pPlayer = t->seats[seat_index].player;
 			if (pPlayer->stake < amount)
 			{
 				// break the straddle chain
-				t->last_straddle = t->getPrePlayer(seat_index);
+				t->last_straddle = t->getPreActivePlayer(seat_index);
 				break;
 			}
 			t->seats[seat_index].bet += amount;
@@ -356,8 +357,8 @@ void SitAndGoGameController::handleStraddle(Table *t)
 	// set next round straddle
 	if (this->mandatory_straddle)
 	{
-		int next_rount_bb = t->getNextPlayer(t->bb);
-		t->last_straddle = t->getNextPlayer(next_rount_bb);
+		int next_rount_bb = t->getNextActivePlayer(t->bb);
+		t->last_straddle = t->getNextActivePlayer(next_rount_bb);
 	}
 	else
 		t->last_straddle = -1;
@@ -652,11 +653,13 @@ void SitAndGoGameController::stateBetting(Table *t)
             case Table::Preflop:
                 t->betround = Table::Flop;
                 dealFlop(t);
+                log_msg("betround", "Flop");
                 break;
 
             case Table::Flop:
                 t->betround = Table::Turn;
                 dealTurn(t);
+                log_msg("betround", "Turn");
 				if (t->nomoreaction)
 					handleInsuranceBenefits(t, 0);
                 break;
@@ -664,6 +667,7 @@ void SitAndGoGameController::stateBetting(Table *t)
             case Table::Turn:
                 t->betround = Table::River;
                 dealRiver(t);
+                log_msg("betround", "River");
 				if (t->nomoreaction)
 					handleInsuranceBenefits(t, 1);
                 break;
@@ -714,6 +718,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 
 		if (t->betround == Table::Flop || t->betround == Table::Turn)
 		{
+            log_msg("insurance", "betround flop or turn, nomoreaction=%d", t->nomoreaction);
 			unsigned int round = 0;
 			if (t->betround == Table::Turn)
 				round = 1;
@@ -722,11 +727,12 @@ void SitAndGoGameController::stateBetting(Table *t)
 			{
 				if (handleBuyInsurance(t, round))
 				{
-					t->resume_state = Table::BettingEnd;
+                    t->resume_state = Table::BettingEnd;
 					t->suspend_reason = Table::BuyInsurace;
 					t->max_suspend_times = 15;
-					t->scheduleState(Table::Suspend, 0);
-				}
+					t->scheduleState(Table::Suspend, 1);
+				    return;
+                }
 			}
 		}
 
@@ -785,7 +791,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
         sstake += ' ';
 
         // player has no stake left
-		int need_stake = 0;
+		unsigned int need_stake = 0;
 		if (ante > 0)
 		{
 			need_stake = blind.amount / 10 * ante;
@@ -868,9 +874,15 @@ int SitAndGoGameController::handleTable(Table *t)
 	else if (t->state == Table::EndRound)
 		stateEndRound(t);
 	else if (t->state == Table::Suspend)
-		stateSuspend(t);
+    {
+        //log_msg("game","handle table suspend");
+        stateSuspend(t);
+    }
 	else if (t->state == Table::Resume)
-		stateResume(t);
+    {
+        log_msg("game","handle table resume");
+        stateResume(t);
+    }
     return 0;
 }
 
@@ -984,11 +996,11 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 
 	if (t->state > Table::Blinds && t->state < Table::EndRound)
 	{
-		int min_player_count = 4;
+        unsigned int min_player_count = 4;
 		if (getMandatoryStraddle())
 			min_player_count = 5;
 
-		if (t->countPlayers() < min_player_count)
+		if (t->countActivePlayers() < min_player_count)
 		{
 			log_msg("nextroundstraddle", "count of player must more than %d", min_player_count - 1);
 			return false;
@@ -996,10 +1008,10 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 
 		if (t->last_straddle == -1)
 		{
-			int pos = t->getNextPlayer(t->bb);
-			pos = t->getNextPlayer(pos);
+			int pos = t->getNextActivePlayer(t->bb);
+			pos = t->getNextActivePlayer(pos);
 			if (getMandatoryStraddle())
-				pos = t->getNextPlayer(pos);
+				pos = t->getNextActivePlayer(pos);
 
 			if (p == t->seats[pos].player)
 			{
@@ -1018,7 +1030,7 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 				log_msg("nextroundstraddle", "all players have been straddled");
 				return false;
 			}
-			int pos = t->getNextPlayer(t->last_straddle);
+			int pos = t->getNextActivePlayer(t->last_straddle);
 			if (p == t->seats[pos].player)
 			{
 				t->last_straddle = pos;
@@ -1038,7 +1050,7 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 
 	if (t->last_straddle != t->dealer)
 	{
-		int pos = t->getNextPlayer(t->last_straddle);
+		int pos = t->getNextActivePlayer(t->last_straddle);
 		
 		snap(t->seats[pos].player->client_id, t->table_id, SnapWantToStraddleNextRound);
 	}
@@ -1048,11 +1060,11 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 
 void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
 {
-	int min_player_count = 4;
+	unsigned int min_player_count = 4;
 	if (getMandatoryStraddle())
 		min_player_count = 5;
 
-	if (t->countPlayers() < min_player_count)
+	if (t->countActivePlayers() < min_player_count)
 	{
 		return;
 	}
@@ -1060,10 +1072,10 @@ void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
 	int cid = 0;
 	if (t->last_straddle == -1)
 	{
-		int pos = t->getNextPlayer(t->bb);
-		pos = t->getNextPlayer(pos);
+		int pos = t->getNextActivePlayer(t->bb);
+		pos = t->getNextActivePlayer(pos);
 		if (getMandatoryStraddle())
-			pos = t->getNextPlayer(pos);
+			pos = t->getNextActivePlayer(pos);
 		
 		cid = t->seats[pos].player->client_id;
 	}
@@ -1073,7 +1085,7 @@ void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
 		{
 			return;
 		}
-		int pos = t->getNextPlayer(t->last_straddle);
+		int pos = t->getNextActivePlayer(t->last_straddle);
 		cid = t->seats[pos].player->client_id;
 	}
 
@@ -1087,7 +1099,7 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 	{
 		if (t->pots[i].vseats.size() > 1)
 		{
-			vector<vector<HandStrength>> winlist;
+			vector<vector<HandStrength> > winlist;
 			vector<HandStrength> wl;
 			for (size_t j = 0; j < t->pots[i].vseats.size(); ++j)
 			{
@@ -1101,12 +1113,12 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 			GameLogic::getWinList(wl, winlist);
 			if (winlist.size() > 1)
 			{
-				// 有胜负
+				// 脫脨脢陇赂潞
 				vector<HandStrength> winers = winlist[0];
 				
 				for (size_t j = 0; j < winers.size(); ++j)
 				{
-					unsigned int seat_id = winers[j].getId();
+					int seat_id = winers[j].getId();
 					Player *p = t->seats[seat_id].player;
 
 					vector<HandStrength> vloser;
@@ -1119,14 +1131,26 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 					}
 					
 					GameLogic::getInsuranceOuts(&winers[j], &vloser, t->deck, &(p->insuraceInfo[round].outs), &(p->insuraceInfo[round].every_single_outs));
-					if (p->insuraceInfo[round].outs.size() > 0)
+                    
+                    GameLogic::getInsuranceOutsDivided(&winers[j], wl, &winlist, t->deck, &(p->insuraceInfo[round].outs_divided));
+
+                    for (size_t j = 0; j < p->insuraceInfo[round].outs_divided.size(); ++ j)
+                    {
+                        if (!GameLogic::cardInList(p->insuraceInfo[round].outs_divided[j], &(p->insuraceInfo[round].outs)))
+                        {
+                            p->insuraceInfo[round].outs.push_back(p->insuraceInfo[round].outs_divided[j]);
+                        }
+                    }
+                    
+                    if (p->insuraceInfo[round].outs.size() > 0)
 					{
-						if (round == 1 || p->insuraceInfo[round].outs.size() <= 20 && round == 0)
+						if ((round == 1) || (p->insuraceInfo[round].outs.size() <= 20 && round == 0))
 						{
+                            log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
+                            p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();
 							ret = true;
 						}
 					}
-					p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();
 				}
 			}
 		}
@@ -1140,7 +1164,7 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 		for (unsigned int i = 0; i < t->countActivePlayers(); i++)
 		{
 			Player *p = t->seats[seat_id].player;
-			// 转牌:20张以上不允许买保险
+			// 脳陋脜脝:20脮脜脪脭脡脧虏禄脭脢脨铆脗貌卤拢脧脮
 			if (p->insuraceInfo[round].outs.size() > 20 && round == 0)
 			{
 				p->insuraceInfo[round].outs.clear();
@@ -1161,8 +1185,19 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 					smsg_outs += scard;
 				}
 
+                std::string smsg_divide_outs;
+
+                for (size_t j = 0; j < p->insuraceInfo[round].outs_divided.size(); ++j)
+                {
+                    if (j == 0)
+                        snprintf(scard, sizeof(scard), "%c%c", p->insuraceInfo[round].outs_divided[j].getFaceSymbol(), p->insuraceInfo[round].outs_divided[j].getSuitSymbol());
+                    else
+                        snprintf(scard, sizeof(scard), ":%c%c", p->insuraceInfo[round].outs_divided[j].getFaceSymbol(), p->insuraceInfo[round].outs_divided[j].getSuitSymbol());
+                    smsg_divide_outs += scard;
+                }
+
 				std::string smsg_others;
-				map<int, vector<Card>>::iterator it = p->insuraceInfo[round].every_single_outs.begin();
+				map<int, vector<Card> >::iterator it = p->insuraceInfo[round].every_single_outs.begin();
 
 				char sother[20];
 				while (it != p->insuraceInfo[round].every_single_outs.end())
@@ -1171,11 +1206,11 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 					{
 						snprintf(sother, sizeof(sother), "%d:%d:%c%c:%c%c",
 							it->first,
-							it->second.size(),
-							p->holecards.getC1()->getFaceSymbol(),
-							p->holecards.getC1()->getSuitSymbol(),
-							p->holecards.getC2()->getFaceSymbol(),
-							p->holecards.getC2()->getSuitSymbol());
+							(int)it->second.size(),
+							t->seats[it->first].player->holecards.getC1()->getFaceSymbol(),
+							t->seats[it->first].player->holecards.getC1()->getSuitSymbol(),
+							t->seats[it->first].player->holecards.getC2()->getFaceSymbol(),
+							t->seats[it->first].player->holecards.getC2()->getSuitSymbol());
 					}
 					smsg_others += sother;
 					++it;
@@ -1185,13 +1220,15 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 					}
 				}
 
-				snprintf(msg, sizeof(msg), "%d %s %s",
+				snprintf(msg, sizeof(msg), "%d %s %s %s",
 					p->insuraceInfo[round].max_payment, 
-					smsg_outs.c_str(),
+                    smsg_outs.c_str(),
+                    smsg_divide_outs.c_str(),
 					smsg_others.c_str());
 
  				snap(p->client_id, t->table_id, SnapBuyInsurance, msg);
-				ret = true;
+			    log_msg("Insurance", "cid=%d, tid=%d, %s",p->client_id, t->table_id, msg);
+                ret = true;
  			}
 			seat_id = t->getNextActivePlayer(seat_id);
 		}
@@ -1225,11 +1262,12 @@ void SitAndGoGameController::initInsuranceRate()
 
 bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, std::vector<Card> & cards)
 {
-	// 获取当前是第几轮买保险
-	Player *p = findPlayer(cid);
+	// 禄帽脠隆碌卤脟掳脢脟碌脷录赂脗脰脗貌卤拢脧脮
+    Player *p = findPlayer(cid);
 	if (!p)
 		return false;
 
+    log_msg("clientBuyInsurance", "cid = %d buy_amount = %d", cid, buy_amount);
 	// Sit&Go games should always have only one table
 	tables_type::iterator e = tables.begin();
 	if (e == tables.end())
@@ -1263,15 +1301,15 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 		return false;
 	}
 
-	if (cards.size() < 1)
+	if (cards.size() < 1 || buy_amount == 0)
 	{
-		// 不购买保险
+		// 虏禄鹿潞脗貌卤拢脧脮
 		p->insuraceInfo[round].every_single_outs.clear();
 		p->insuraceInfo[round].outs.clear();
 	}
 	else
 	{
-		// 牌是否正确
+		// 脜脝脢脟路帽脮媒脠路
 		for (size_t i = 0; i < cards.size(); ++i)
 		{
 			bool find = false;
@@ -1291,7 +1329,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 			}
 		}
 
-		// 计算购买的数量是否合法
+		// 录脝脣茫鹿潞脗貌碌脛脢媒脕驴脢脟路帽潞脧路篓
 		size_t index = cards.size();
 		index = index > 20 ? 20 : index;
 		float rate = insurance_rate[index];
@@ -1310,9 +1348,10 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 		p->insuraceInfo[round].bought = true;
 		p->insuraceInfo[round].buy_amount = buy_amount;
 		p->insuraceInfo[round].buy_cards.insert(p->insuraceInfo[round].buy_cards.begin(), cards.begin(), cards.end());
-	}
+	    log_msg("clientBuyInsurance", "round = %d buy_amount = %d", round, buy_amount);
+    }
 
-	// 检测是否所有人都购买了保险
+	// 录矛虏芒脢脟路帽脣霉脫脨脠脣露录鹿潞脗貌脕脣卤拢脧脮
 	unsigned int pos = t->dealer;
 	bool all_bought = true;
 	for (size_t i = 0; i < t->countActivePlayers(); ++ i)
@@ -1338,11 +1377,10 @@ void SitAndGoGameController::stateShowdown(Table *t)
 {
 	GameController::stateShowdown(t);
 
-	chips_type insurance_res = 0;
-
 	unsigned int pos = t->dealer;
 	for (size_t i = 0; i < t->countActivePlayers(); ++i)
 	{
+        unsigned int insurance_res = 0;
 		Player *p = t->seats[pos].player;
 		for (size_t j = 0; j < 2; ++ j)
 		{
@@ -1351,11 +1389,12 @@ void SitAndGoGameController::stateShowdown(Table *t)
 				insurance_res += p->insuraceInfo[j].res_amount;
 			}
 		}
-		// 计算保险支出
+		// 录脝脣茫卤拢脧脮脰搂鲁枚
 		if (insurance_res > 0)
 		{
+            log_msg("insurance","insurance_res:%d", insurance_res);
 			p->stake -= insurance_res;
-			// 发消息
+			// 路垄脧没脧垄
 		}
 		
 		pos = t->getNextActivePlayer(pos);
@@ -1380,58 +1419,70 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 	{
 		Player *p = t->seats[pos].player;
 
-		// 判断保险是否买中
+		// 脜脨露脧卤拢脧脮脢脟路帽脗貌脰脨
 		if (p->insuraceInfo[round].bought)
 		{
 			do 
 			{
 				if (!GameLogic::cardInList(card, &(p->insuraceInfo[round].outs)))
 				{
-					// 发出的牌不在outs中，继续领先，结算时，需要扣购买保险的费用
-					// 计算保险费
+					// 路垄鲁枚碌脛脜脝虏禄脭脷outs脰脨拢卢录脤脨酶脕矛脧脠拢卢陆谩脣茫脢卤拢卢脨猫脪陋驴脹鹿潞脗貌卤拢脧脮碌脛路脩脫脙
+					// 录脝脣茫卤拢脧脮路脩
 					if (p->insuraceInfo[round].outs.size() == p->insuraceInfo[round].buy_cards.size())
 					{
-						// 全买
+						// 脠芦脗貌
 						p->insuraceInfo[round].res_amount = p->insuraceInfo[round].buy_amount;
 					}
 					else
 					{
 						size_t no_buy_card_size = p->insuraceInfo[round].outs.size() - p->insuraceInfo[round].buy_cards.size();
-						no_buy_card_size > 20 ? 20 : no_buy_card_size;
+						if(no_buy_card_size > 20)
+                            no_buy_card_size = 20;
 						chips_type take_back_amount = (chips_type)ceil(p->insuraceInfo[round].buy_amount / insurance_rate[no_buy_card_size]);
-						// 购买部分，需要计算带回保险费
+						// 鹿潞脗貌虏驴路脰拢卢脨猫脪陋录脝脣茫麓酶禄脴卤拢脧脮路脩
 						p->insuraceInfo[round].res_amount = p->insuraceInfo[round].buy_amount + take_back_amount;
 					}
-					break;
+				    break;
 				}
 
-				// 在购买的outs中
+				// 脭脷鹿潞脗貌碌脛outs脰脨
 				if (GameLogic::cardInList(card, &(p->insuraceInfo[round].buy_cards)))
 				{
 					size_t rate_index = p->insuraceInfo[round].buy_cards.size();
-					rate_index > 20 ? 20 : rate_index;
+					
+                    if (rate_index > 20)
+                        rate_index = 20;
+                    
 					chips_type payment = p->insuraceInfo[round].buy_amount * insurance_rate[rate_index];
-					payment > p->insuraceInfo[round].max_payment ? p->insuraceInfo[round].max_payment : payment;
+					if (payment > p->insuraceInfo[round].max_payment)
+                        payment = p->insuraceInfo[round].max_payment;
 
 					if (p->insuraceInfo[round].outs.size() == p->insuraceInfo[round].buy_cards.size())
 					{
-						// 全买,赔付
+						// 脠芦脗貌,脜芒赂露
 						p->stake += payment;
-						// 发送消息，赔钱
-					}
+						// 路垄脣脥脧没脧垄拢卢脜芒脟庐
+				        snprintf(msg, sizeof(msg), "%d", payment);
+                        snap(p->client_id, t->table_id, SnapInsuranceBenefits, msg);
+                    }
 					else
 					{
 						size_t no_buy_card_size = p->insuraceInfo[round].outs.size() - p->insuraceInfo[round].buy_cards.size();
-						no_buy_card_size > 20 ? 20 : no_buy_card_size;
-						chips_type take_back_amount = (chips_type)ceil(p->insuraceInfo[round].buy_amount / insurance_rate[no_buy_card_size]);
+						
+						if (no_buy_card_size > 20)
+                            no_buy_card_size = 20;
+
+                        chips_type take_back_amount = (chips_type)ceil(p->insuraceInfo[round].buy_amount / insurance_rate[no_buy_card_size]);
 						payment -= take_back_amount;
 						p->stake += payment;
-						// 发送消息，赔钱
-					}
+						// 路垄脣脥脧没脧垄拢卢脜芒脟庐
+					    snprintf(msg, sizeof(msg), "%d", payment);
+                        snap(p->client_id, t->table_id, SnapInsuranceBenefits, msg);
+                    }
 					break;
 				}
 
-				// 在outs中，但是没买，带回
+				// 脭脷outs脰脨拢卢碌芦脢脟脙禄脗貌拢卢麓酶禄脴
 				
 			} while (0);
 		}
@@ -1444,7 +1495,7 @@ void SitAndGoGameController::stateResume(Table * t)
 {
 	if (t->suspend_reason == Table::BuyInsurace)
 	{
-		// 第四轮购买保险的第五轮必须购买
+		// 碌脷脣脛脗脰鹿潞脗貌卤拢脧脮碌脛碌脷脦氓脗脰卤脴脨毛鹿潞脗貌
 		if (t->betround == Table::Turn)
 		{
 			unsigned int pos = t->dealer;
@@ -1459,14 +1510,16 @@ void SitAndGoGameController::stateResume(Table * t)
 						p->insuraceInfo[1].bought = true;
 						p->insuraceInfo[1].buy_cards = p->insuraceInfo[1].outs;
 						size_t rate_index = p->insuraceInfo[1].outs.size();
-						rate_index > 20 ? 20 : rate_index;
+						if (rate_index > 20)
+                            rate_index = 20;
 						p->insuraceInfo[1].buy_amount = ceil(p->insuraceInfo[0].buy_amount / insurance_rate[rate_index]);
 					}
 				}
 
 				pos = t->getNextActivePlayer(pos);
-			}
-		}
+	    	}
+        }    
 	}
 	GameController::stateResume(t);
 }
+

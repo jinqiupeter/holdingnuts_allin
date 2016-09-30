@@ -100,7 +100,8 @@ void Deck::debugPushCards(const vector<Card> *cardsvec)
 void Deck::load()
 {
 	FILE *f = NULL;
-	fopen_s(&f, "cards", "rb");
+	f = fopen("cards","rb");
+	//fopen_s(&f, "cards", "rb");
 	if (!f)
 	{
 		return;

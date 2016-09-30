@@ -107,6 +107,26 @@ int Table::getNextActivePlayer(unsigned int pos)
 	return cur;
 }
 
+int Table::getPreActivePlayer(unsigned int pos)
+{
+    unsigned int start = pos;
+    unsigned int cur = pos;
+    bool found = false;
+    do
+    {
+        cur = getPrePlayer(cur);
+        
+        if(start == cur)
+            return -1;
+
+        if(seats[cur].in_round)
+            found = true;
+    }while(!found);
+
+    return cur;
+}
+
+
 unsigned int Table::countPlayers()
 {
 	unsigned int count = 0;
@@ -335,9 +355,10 @@ void Table::scheduleState(State sched_state, unsigned int delay_sec)
 
 void Table::clearInsuraceInfo()
 {
-	for (unsigned int i = 0; i < countActivePlayers(); i++)
+    unsigned int seat_id = dealer;
+	for (unsigned int i = 0; i < countPlayers(); i++)
 	{
-		Player *p = seats[dealer].player;
+		Player *p = seats[seat_id].player;
 		for (unsigned int j = 0; j < 2; ++j)
 		{
 			p->insuraceInfo[j].bought = false;
@@ -345,8 +366,11 @@ void Table::clearInsuraceInfo()
 			p->insuraceInfo[j].max_payment = 0;
 			p->insuraceInfo[j].buy_cards.clear();
 			p->insuraceInfo[j].outs.clear();
-			p->insuraceInfo[j].every_single_outs.clear();
+			p->insuraceInfo[j].outs_divided.clear();
+            p->insuraceInfo[j].every_single_outs.clear();
 			p->insuraceInfo[j].res_amount = 0;
-		}
-	}
+        }
+        seat_id = getNextPlayer(seat_id);
+	    log_msg("insurance", "clear insurance info %d", i);
+    }
 }

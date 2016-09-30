@@ -90,7 +90,8 @@ public:
 	int getNextPlayer(unsigned int pos);
 	int getPrePlayer(unsigned int pos);
 	int getNextActivePlayer(unsigned int pos);
-	unsigned int countPlayers();
+	int getPreActivePlayer(unsigned int pos);
+    unsigned int countPlayers();
 	unsigned int countActivePlayers();
 	unsigned int removePlayer(int seat_no);
 	bool isAllin();

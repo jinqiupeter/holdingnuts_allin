@@ -76,8 +76,9 @@ public:
 		chips_type buy_amount;
 		// outs
 		std::vector<Card> outs;
-		// 对手outs
-		std::map<int, std::vector<Card>> every_single_outs;
+	    std::vector<Card> outs_divided;
+        // 对手outs
+        std::map<int, std::vector<Card> > every_single_outs;
 		// 购买的outs
 		std::vector<Card> buy_cards;
 		// 结算扣钱

@@ -57,6 +57,7 @@ typedef enum {
     SnapStakeChange = 0x12,
 	SnapWantToStraddleNextRound = 0x13,
 	SnapBuyInsurance = 0x14,
+    SnapInsuranceBenefits = 0x15,
 } snaptype;
 
 //! \brief Snapshot gamestate types

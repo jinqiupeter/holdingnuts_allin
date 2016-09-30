@@ -603,8 +603,8 @@ void GameController::dealRiver(Table *t)
 
 void GameController::stateNewRound(Table *t)
 {
-    // count up current hand number
-	t->clearInsuraceInfo();
+    log_msg("game", "state new Round");
+    // count up current hand number	
     hand_no++;
 
     snprintf(msg, sizeof(msg), "%d %d", SnapGameStateNewHand, hand_no);
@@ -686,7 +686,8 @@ void GameController::stateNewRound(Table *t)
     // player under the gun
     t->cur_player = t->getNextPlayer(t->bb);
     t->last_bet_player = t->cur_player;
-
+    
+    t->clearInsuraceInfo();
     sendTableSnapshot(t);
 
     t->state = Table::Blinds;
@@ -1177,7 +1178,8 @@ void GameController::resume()
 
 void GameController::stateSuspend(Table *t)
 {
-	if (t->suspend_times == 0)
+//	log_msg("game", "state Suspend %d", t->suspend_times);
+    if (t->suspend_times == 0)
 	{
 		snprintf(msg, sizeof(msg), "%d %d %d", SnapGameStateTableSuspend, t->suspend_reason, t->max_suspend_times - t->suspend_times);
 		snap(t->table_id, SnapGameState, msg);
@@ -1195,6 +1197,7 @@ void GameController::stateSuspend(Table *t)
 
 void GameController::stateResume(Table * t)
 {
+    log_msg("game", "state Resume");
 	snprintf(msg, sizeof(msg), "%d", SnapGameStateTableResume);
 	snap(t->table_id, SnapGameState, msg);
 

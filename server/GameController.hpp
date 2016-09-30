@@ -155,7 +155,7 @@ public:
     virtual void handleRebuy(Table *t) {return;};
     bool rebuy(int cid, chips_type rebuy_stake);
 	bool addPlayer(int cid, const std::string &uuid);
-	virtual bool clientBuyInsurance(int cid, int buy_amount, std::vector<Card> & cards) {return false; };
+	virtual bool clientBuyInsurance(int cid, chips_type buy_amount, std::vector<Card> & cards) { log_msg("clientBuyInsurance", "Called by GameController"); return false; };
 	virtual bool nextRoundStraddle(int cid) { return false; };
     virtual bool addPlayer(int cid, const std::string &uuid, chips_type player_stake){return true;};
 	virtual bool removePlayer(int cid) {return true;};
