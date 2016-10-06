@@ -36,6 +36,7 @@ Table::Table()
 	suspend_times = 0;
 	max_suspend_times = 0;
 	suspend_reason = NoReason;
+    enable_insurance = true;
 }
 
 int Table::getNextPlayer(unsigned int pos)
@@ -351,26 +352,4 @@ void Table::scheduleState(State sched_state, unsigned int delay_sec)
     state = sched_state;
     delay = delay_sec;
     delay_start = time(NULL);
-}
-
-void Table::clearInsuraceInfo()
-{
-    unsigned int seat_id = dealer;
-	for (unsigned int i = 0; i < countPlayers(); i++)
-	{
-		Player *p = seats[seat_id].player;
-		for (unsigned int j = 0; j < 2; ++j)
-		{
-			p->insuraceInfo[j].bought = false;
-			p->insuraceInfo[j].buy_amount = 0;
-			p->insuraceInfo[j].max_payment = 0;
-			p->insuraceInfo[j].buy_cards.clear();
-			p->insuraceInfo[j].outs.clear();
-			p->insuraceInfo[j].outs_divided.clear();
-            p->insuraceInfo[j].every_single_outs.clear();
-			p->insuraceInfo[j].res_amount = 0;
-        }
-        seat_id = getNextPlayer(seat_id);
-	    log_msg("insurance", "clear insurance info %d", i);
-    }
 }

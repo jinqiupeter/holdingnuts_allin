@@ -23,7 +23,7 @@
 
 #include "Debug.h"
 #include "Player.hpp"
-
+#include "../system/Logger.h"
 using namespace std;
 
 Player::Player()
@@ -40,3 +40,22 @@ Player::Player()
     timedout_count = 0;
     timeout = 0;
 }
+
+void Player::clearInsuranceInfo()
+{
+    for(size_t i = 0; i < 2; ++i)
+    {
+        insuraceInfo[i].bought = false;
+        insuraceInfo[i].buy_amount = 0;
+        insuraceInfo[i].max_payment = 0;
+        insuraceInfo[i].buy_cards.clear();
+        insuraceInfo[i].outs.clear();
+        insuraceInfo[i].outs_divided.clear();
+        insuraceInfo[i].every_single_outs.clear();
+        insuraceInfo[i].res_amount = 0;
+    }
+    log_msg("player", "%d clear insurance info", seat_no);
+}
+
+
+

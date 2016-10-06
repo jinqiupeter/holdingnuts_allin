@@ -663,7 +663,7 @@ void GameController::stateNewRound(Table *t)
 
         p->holecards.clear();
         p->resetLastAction();
-
+        p->clearInsuranceInfo();
         p->stake_before = p->stake;	// remember stake before this hand
         p->setTimeout(timeout);
     }
@@ -687,7 +687,7 @@ void GameController::stateNewRound(Table *t)
     t->cur_player = t->getNextPlayer(t->bb);
     t->last_bet_player = t->cur_player;
     
-    t->clearInsuraceInfo();
+    //t->clearInsuraceInfo();
     sendTableSnapshot(t);
 
     t->state = Table::Blinds;

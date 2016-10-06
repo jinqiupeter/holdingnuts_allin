@@ -660,7 +660,7 @@ void SitAndGoGameController::stateBetting(Table *t)
                 t->betround = Table::Turn;
                 dealTurn(t);
                 log_msg("betround", "Turn");
-				if (t->nomoreaction)
+				if (t->nomoreaction && t->enable_insurance)
 					handleInsuranceBenefits(t, 0);
                 break;
 
@@ -668,7 +668,7 @@ void SitAndGoGameController::stateBetting(Table *t)
                 t->betround = Table::River;
                 dealRiver(t);
                 log_msg("betround", "River");
-				if (t->nomoreaction)
+				if (t->nomoreaction && t->enable_insurance)
 					handleInsuranceBenefits(t, 1);
                 break;
 
@@ -723,7 +723,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 			if (t->betround == Table::Turn)
 				round = 1;
 
-			if (t->nomoreaction)
+			if (t->nomoreaction && t->enable_insurance)
 			{
 				if (handleBuyInsurance(t, round))
 				{
@@ -1141,13 +1141,18 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                             p->insuraceInfo[round].outs.push_back(p->insuraceInfo[round].outs_divided[j]);
                         }
                     }
+
+                    sort(p->insuraceInfo[round].outs.begin(), p->insuraceInfo[round].outs.end(), greater<Card>());
                     
                     if (p->insuraceInfo[round].outs.size() > 0)
 					{
 						if ((round == 1) || (p->insuraceInfo[round].outs.size() <= 20 && round == 0))
-						{
+                        {
+                            if (round == 0)
+                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size() * 0.4);
+                            else
+                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size() * 0.6);
                             log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
-                            p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();
 							ret = true;
 						}
 					}
@@ -1162,7 +1167,8 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 
 		unsigned int seat_id = t->dealer;
 		for (unsigned int i = 0; i < t->countActivePlayers(); i++)
-		{
+        {
+			seat_id = t->getNextActivePlayer(seat_id);
 			Player *p = t->seats[seat_id].player;
 			// ×ªÅÆ:20ÕÅÒÔÉÏ²»ÔÊÐíÂò±£ÏÕ
 			if (p->insuraceInfo[round].outs.size() > 20 && round == 0)
@@ -1230,7 +1236,6 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 			    log_msg("Insurance", "cid=%d, tid=%d, %s",p->client_id, t->table_id, msg);
                 ret = true;
  			}
-			seat_id = t->getNextActivePlayer(seat_id);
 		}
 	}
 	return ret;
@@ -1277,7 +1282,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 	}
 	Table *t = e->second;
 
-	if (t->state != Table::Suspend || t->suspend_reason != Table::BuyInsurace)
+	if (!t->enable_insurance || t->state != Table::Suspend || t->suspend_reason != Table::BuyInsurace)
 	{
 		log_msg("clientBuyInsurance", "is not in the correct table state");
 		return false;
@@ -1356,13 +1361,13 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 	bool all_bought = true;
 	for (size_t i = 0; i < t->countActivePlayers(); ++ i)
 	{
+		pos = t->getNextActivePlayer(pos);
 		Player *player = t->seats[pos].player;
 		if (player->insuraceInfo[round].outs.size() > 0 && player->insuraceInfo[round].bought == false)
 		{
 			all_bought = false;
 			break;
 		}
-		pos = t->getNextActivePlayer(pos);
 	}
 
 	if (all_bought)
@@ -1376,10 +1381,12 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 void SitAndGoGameController::stateShowdown(Table *t)
 {
 	GameController::stateShowdown(t);
-
+    if (!t->enable_insurance)
+        return;
 	unsigned int pos = t->dealer;
 	for (size_t i = 0; i < t->countActivePlayers(); ++i)
 	{
+		pos = t->getNextActivePlayer(pos);
         unsigned int insurance_res = 0;
 		Player *p = t->seats[pos].player;
 		for (size_t j = 0; j < 2; ++ j)
@@ -1395,14 +1402,16 @@ void SitAndGoGameController::stateShowdown(Table *t)
             log_msg("insurance","insurance_res:%d", insurance_res);
 			p->stake -= insurance_res;
 			// ·¢ÏûÏ¢
-		}
+		    snprintf(msg, sizeof(msg), "-%d", insurance_res);
+            snap(p->client_id, t->table_id, SnapInsuranceBenefits, msg);
+        }
 		
-		pos = t->getNextActivePlayer(pos);
 	}
 }
 
 void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int round)
 {
+    log_msg("insurance", "Benefits : %d", round);
 	vector<Card> cards;
 	t->communitycards.copyCards(&cards);
 	size_t card_index = 3;
@@ -1417,6 +1426,7 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 	unsigned int pos = t->dealer;
 	for (size_t i = 0; i < t->countActivePlayers(); ++i)
 	{
+		pos = t->getNextActivePlayer(pos);
 		Player *p = t->seats[pos].player;
 
 		// ÅÐ¶Ï±£ÏÕÊÇ·ñÂòÖÐ
@@ -1464,6 +1474,7 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 						// ·¢ËÍÏûÏ¢£¬ÅâÇ®
 				        snprintf(msg, sizeof(msg), "%d", payment);
                         snap(p->client_id, t->table_id, SnapInsuranceBenefits, msg);
+                        log_msg("Insurance", "get benefits %d", payment);
                     }
 					else
 					{
@@ -1478,6 +1489,8 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 						// ·¢ËÍÏûÏ¢£¬ÅâÇ®
 					    snprintf(msg, sizeof(msg), "%d", payment);
                         snap(p->client_id, t->table_id, SnapInsuranceBenefits, msg);
+
+                        log_msg("Insurance", "get benefits %d", payment);
                     }
 					break;
 				}
@@ -1487,7 +1500,6 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 			} while (0);
 		}
 
-		pos = t->getNextActivePlayer(pos);
 	}
 }
 
@@ -1501,7 +1513,8 @@ void SitAndGoGameController::stateResume(Table * t)
 			unsigned int pos = t->dealer;
 			for (size_t i = 0; i < t->countActivePlayers(); ++i)
 			{
-				Player *p = t->seats[pos].player;
+				pos = t->getNextActivePlayer(pos);
+                Player *p = t->seats[pos].player;
 
 				if (p->insuraceInfo[0].bought && !p->insuraceInfo[1].bought)
 				{
@@ -1516,7 +1529,6 @@ void SitAndGoGameController::stateResume(Table * t)
 					}
 				}
 
-				pos = t->getNextActivePlayer(pos);
 	    	}
         }    
 	}

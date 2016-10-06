@@ -104,7 +104,6 @@ public:
 	void scheduleState(State sched_state, unsigned int delay_sec);
 	void tick();
 
-	void clearInsuraceInfo();
 	
 private:
 	int table_id;
@@ -139,6 +138,7 @@ private:
 	chips_type bet_amount;
 	chips_type last_bet_amount;
 	std::vector<Pot> pots;
+    bool enable_insurance;
 };
 
 

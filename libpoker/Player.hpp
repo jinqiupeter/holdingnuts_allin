@@ -110,6 +110,7 @@ public:
 
     void setSeatNo(int number) { seat_no = number; };	
     int getSeatNo() { return seat_no; };
+    void clearInsuranceInfo();
 private:
 	int client_id;
 	
