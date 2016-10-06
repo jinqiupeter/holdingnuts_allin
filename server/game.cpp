@@ -838,6 +838,8 @@ int client_cmd_rebuy(clientcon *client, Tokenizer &t)
 	t >> gid;
     int rebuy_stake;
     t >> rebuy_stake;
+    int player_id;
+    t >> player_id;
 	
 	GameController *g = get_game_by_id(gid);
 	if (!g)
@@ -846,22 +848,22 @@ int client_cmd_rebuy(clientcon *client, Tokenizer &t)
 		return 1;
 	}
 
-	log_msg("game ", "rebuying %d for user %d in game %d", rebuy_stake, client->id, gid);
+	log_msg("game ", "rebuying %d for user %d in game %d", rebuy_stake, player_id, gid);
 	
-	if (!g->isPlayer(client->id))
+	if (!g->isPlayer(player_id))
 	{
 		send_err(client, 0 /*FIXME*/, "you are not registered");
 		return 1;
 	}
 	
-	if (!g->rebuy(client->id, rebuy_stake))
+	if (!g->rebuy(player_id, rebuy_stake))
 	{
 		send_err(client, 0 /*FIXME*/, "unable to rebuy");
 		return 1;
 	}
 	
 	
-	log_msg("client ", "player %d rebought stake %d", client->id, rebuy_stake);
+	log_msg("client ", "player %d rebought stake %d", player_id, rebuy_stake);
 	
 	return 0;
 }
@@ -1461,7 +1463,7 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		{
 			ginfo.blinds_start = Tokenizer::string2int(infoarg);
 			
-			if (ginfo.blinds_start < 5 || ginfo.blinds_start > 200*100)
+			if (ginfo.blinds_start < 1 || ginfo.blinds_start > 200*100)
 				cmderr = true;
 		}
 		else if (infotype == "blinds_factor" && havearg)
