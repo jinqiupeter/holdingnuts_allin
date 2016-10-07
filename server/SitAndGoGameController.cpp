@@ -295,7 +295,7 @@ void SitAndGoGameController::handleRebuy(Table *t)
 	chips_type amount = blind.amount;
 	if (ante > 0)
 	{
-		amount += blind.amount / 10 * ante;
+		amount += ante;
 	}
 
     for (players_type::iterator e = players.begin(); e != players.end();)
@@ -319,7 +319,8 @@ void SitAndGoGameController::handleAnte(Table *t)
 
 	if (ante > 0)
 	{
-		ante_amount = blind.amount / 10 * ante;
+        log_msg("ante", "handle Ante called");
+		ante_amount = ante;//blind.amount / 10 * ante;
 		for (unsigned int i = 0; i < 10; ++i)
 		{
 			if (!t->seats[i].occupied)
@@ -660,7 +661,7 @@ void SitAndGoGameController::stateBetting(Table *t)
                 t->betround = Table::Turn;
                 dealTurn(t);
                 log_msg("betround", "Turn");
-				if (t->nomoreaction && t->enable_insurance)
+				if (t->nomoreaction && enable_insurance)
 					handleInsuranceBenefits(t, 0);
                 break;
 
@@ -668,7 +669,7 @@ void SitAndGoGameController::stateBetting(Table *t)
                 t->betround = Table::River;
                 dealRiver(t);
                 log_msg("betround", "River");
-				if (t->nomoreaction && t->enable_insurance)
+				if (t->nomoreaction && enable_insurance)
 					handleInsuranceBenefits(t, 1);
                 break;
 
@@ -723,7 +724,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 			if (t->betround == Table::Turn)
 				round = 1;
 
-			if (t->nomoreaction && t->enable_insurance)
+			if (t->nomoreaction && enable_insurance)
 			{
 				if (handleBuyInsurance(t, round))
 				{
@@ -1082,13 +1083,14 @@ void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
 	else
 	{
 		if (t->last_straddle == t->dealer)
-		{
+        {
+            log_msg("straddle", "last_straddle == t->dealer" );
 			return;
 		}
 		int pos = t->getNextActivePlayer(t->last_straddle);
 		cid = t->seats[pos].player->client_id;
 	}
-
+    log_msg("straddle", "cid=%d", cid);
 	snap(cid, t->table_id, SnapWantToStraddleNextRound);
 }
 
@@ -1249,19 +1251,19 @@ void SitAndGoGameController::initInsuranceRate()
 	insurance_rate[4] = 7.5f;
 	insurance_rate[5] = 6.0f;
 	insurance_rate[6] = 5.0f;
-	insurance_rate[7] = 4.5f;
+	insurance_rate[7] = 4.0f;
 	insurance_rate[8] = 3.5f;
 	insurance_rate[9] = 3.0f;
 	insurance_rate[10] = 2.5f;
-	insurance_rate[11] = 2.3f;
-	insurance_rate[12] = 2.1f;
-	insurance_rate[13] = 1.9f;
-	insurance_rate[14] = 1.8f;
+	insurance_rate[11] = 2.2f;
+	insurance_rate[12] = 2.0f;
+	insurance_rate[13] = 1.8f;
+	insurance_rate[14] = 1.6f;
 	insurance_rate[15] = 1.4f;
-	insurance_rate[16] = 1.2f;
-	insurance_rate[17] = 1.1f;
-	insurance_rate[18] = 1.0f;
-	insurance_rate[19] = 0.9f;
+	insurance_rate[16] = 1.3f;
+	insurance_rate[17] = 1.2f;
+	insurance_rate[18] = 1.1f;
+	insurance_rate[19] = 1.0f;
 	insurance_rate[20] = 0.8f;
 }
 
@@ -1282,7 +1284,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 	}
 	Table *t = e->second;
 
-	if (!t->enable_insurance || t->state != Table::Suspend || t->suspend_reason != Table::BuyInsurace)
+	if (!enable_insurance || t->state != Table::Suspend || t->suspend_reason != Table::BuyInsurace)
 	{
 		log_msg("clientBuyInsurance", "is not in the correct table state");
 		return false;
@@ -1381,7 +1383,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 void SitAndGoGameController::stateShowdown(Table *t)
 {
 	GameController::stateShowdown(t);
-    if (!t->enable_insurance)
+    if (!enable_insurance)
         return;
 	unsigned int pos = t->dealer;
 	for (size_t i = 0; i < t->countActivePlayers(); ++i)

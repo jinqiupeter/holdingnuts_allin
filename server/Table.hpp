@@ -138,7 +138,6 @@ private:
 	chips_type bet_amount;
 	chips_type last_bet_amount;
 	std::vector<Pot> pots;
-    bool enable_insurance;
 };
 
 

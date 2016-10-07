@@ -1382,7 +1382,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		string password;
 		bool restart;
         int expire_in;
-	} ginfo = {
+	    bool enable_insurance;
+    } ginfo = {
 		"user_game",
 		9,
 		GameController::SNG,
@@ -1397,6 +1398,7 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		"",
 		false,
         30 * 60,
+        true
 	};
 	
 	
@@ -1483,9 +1485,7 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		else if (infotype == "ante" && havearg)
 		{
 			ginfo.ante = Tokenizer::string2int(infoarg);
-
-			if (ginfo.ante < 0 || ginfo.ante > 10)
-				cmderr = true;
+            log_msg("Ante", "create game ante %d", ginfo.ante);
 		}
 		else if (infotype == "mandatory_straddle" && havearg)
 		{
@@ -1512,6 +1512,11 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
             if (ginfo.expire_in < 0)
                 cmderr = true;
 		}
+        else if (infotype == "enable_insurance" && havearg)
+        {
+            log_msg("game", "param enable_insurance");
+            ginfo.enable_insurance = Tokenizer::string2int(infoarg) ? 1 : 0;
+        }
 	}
 	
 	if (!cmderr)
@@ -1539,10 +1544,11 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		g->setMandatoryStraddle(ginfo.mandatory_straddle);
 		g->setPassword(ginfo.password);
 		g->setRestart(ginfo.restart);
-		games[gid] = g;
-		
-		log_msg("game", "%s (%d) created game %d",
-			client->info.name, client->id, gid);
+		g->setEnableInsurance(ginfo.enable_insurance);
+        games[gid] = g;
+
+		log_msg("game", "%s (%d) created game %d, enable_insurance = %d",
+			client->info.name, client->id, gid, ginfo.enable_insurance);
 		
 		// update stats
 		stats.games_created++;

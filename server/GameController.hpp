@@ -111,6 +111,9 @@ public:
 	void setMandatoryStraddle(bool val) { mandatory_straddle = val; };
 	bool getMandatoryStraddle() const { return mandatory_straddle; };
 
+    void setEnableInsurance(bool val) { enable_insurance = val; };
+    bool getEnableInsurance() const { return enable_insurance; };
+
 	void setBlindsStart(chips_type blinds_start) { blind.start = blinds_start; };
 	chips_type getBlindsStart() const { return blind.start; };
 	void setBlindsFactor(unsigned int blinds_factor) { blind.blinds_factor = blinds_factor; };
@@ -249,7 +252,7 @@ public:
 
 	unsigned int ante;
 	bool mandatory_straddle;
-	
+    bool enable_insurance;	
 
 	unsigned int hand_no;
 	

@@ -124,7 +124,7 @@ void GameController::reset()
 
 	ante = 0;
 	mandatory_straddle = false;
-	
+    enable_insurance = true;	
 	// remove all players
 	for (players_type::iterator e = players.begin(); e != players.end();)
 	{

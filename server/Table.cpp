@@ -36,7 +36,6 @@ Table::Table()
 	suspend_times = 0;
 	max_suspend_times = 0;
 	suspend_reason = NoReason;
-    enable_insurance = true;
 }
 
 int Table::getNextPlayer(unsigned int pos)
