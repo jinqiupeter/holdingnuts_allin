@@ -1206,10 +1206,10 @@ int client_cmd_action(clientcon *client, Tokenizer &t)
 	
 	int gid;
 	string action;
-	chips_type amount;
+	chips_type arg;
 	
 	t >> gid >> action;
-	amount = t.getNextInt();
+	arg = t.getNextInt();
 	
 	GameController *g = get_game_by_id(gid);
 	if (!g)
@@ -1251,7 +1251,7 @@ int client_cmd_action(clientcon *client, Tokenizer &t)
 	}
 	
 	
-	g->setPlayerAction(client->id, a, amount);
+	g->setPlayerAction(client->id, a, arg);
 	
 	return 0;
 }

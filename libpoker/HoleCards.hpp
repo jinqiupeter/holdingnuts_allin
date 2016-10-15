@@ -25,6 +25,7 @@
 #define _HOLECARDS_H
 
 #include <vector>
+#include <string>
 
 #include "Card.hpp"
 
@@ -34,15 +35,18 @@ public:
 	HoleCards();
 	
 	bool setCards(Card c1, Card c2);
-	void clear() { cards.clear(); };
+    bool setShowCard(int which, bool show);
+	void clear() { cards.clear(); showcards.clear();};
 	
 	void copyCards(std::vector<Card> *v) const { v->insert(v->end(), cards.begin(), cards.end()); };
+    std::string showCards();
 	Card * getC1() { if (cards.size() > 0) return &cards[0]; else return NULL; };
 	Card * getC2() { if (cards.size() > 1) return &cards[1]; else return NULL; };
 	
 	void debug();
 private:
 	std::vector<Card> cards;
+	std::vector<bool> showcards;
 };
 
 #endif /* _HOLECARDS_H */

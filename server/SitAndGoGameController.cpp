@@ -154,7 +154,8 @@ bool SitAndGoGameController::arrangeSeat(int cid)
 			continue;
 		
 		t->seats[i].in_round = false;
-		t->seats[i].showcards = false;
+		t->seats[i].auto_showcards = false;
+		t->seats[i].manual_showcards = false;
 		t->seats[i].bet = 0;
 		t->seats[i].occupied = true;
 
@@ -694,7 +695,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 
             case Table::River:
                 // last_bet_player MUST show his hand
-                t->seats[t->last_bet_player].showcards = true;
+                t->seats[t->last_bet_player].auto_showcards = true;
 
                 // set the player behind last action as current player
                 t->cur_player = t->getNextActivePlayer(t->last_bet_player);
@@ -865,7 +866,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
     // determine next dealer
     t->dealer = t->getNextPlayer(t->dealer);
 
-    t->scheduleState(Table::NewRound, 1);
+    t->scheduleState(Table::NewRound, 4);
 
 }
 

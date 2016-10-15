@@ -72,7 +72,8 @@ public:
 		Player *player;
 		chips_type bet;
 		bool in_round;   // is player involved in current hand?
-		bool showcards;  // does the player want to show cards?
+		bool auto_showcards;  // has the system force the player to show cards?
+		bool manual_showcards;  // does the player want to show cards?
 	} Seat;
 	
 	typedef struct {

@@ -37,7 +37,37 @@ bool HoleCards::setCards(Card c1, Card c2)
 	cards.push_back(c1);
 	cards.push_back(c2);
 	
+    showcards.clear();
+	showcards.push_back(false);
+	showcards.push_back(false);
+
 	return true;
+}
+
+bool HoleCards::setShowCard(int which, bool show)
+{
+    if (which < 0 || which > 1) {
+        return false;
+    };
+
+    showcards[which] = show;
+
+	return true;
+}
+
+std::string HoleCards::showCards() 
+{
+    std::string shole;
+    for (size_t i = 0; i < cards.size(); i++) {
+        shole += "_";
+        if (showcards[i]) {
+            shole += cards[i].getName();
+        } else {
+            shole += "-";
+        }
+    }
+
+    return shole;
 }
 
 void HoleCards::debug()
