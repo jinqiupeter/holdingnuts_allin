@@ -328,13 +328,17 @@ void SitAndGoGameController::handleAnte(Table *t)
 
 			Player *p = t->seats[i].player;
 			t->seats[i].bet += ante_amount;
-			p->stake -= ante_amount;
+			//t->bet_amount += ante_amount;
+            p->stake -= ante_amount;
 		}
-	}
+       
+        t->collectBets();
+    }
 }
 
 void SitAndGoGameController::handleStraddle(Table *t)
 {
+    t->straddle_amount = 0;
 	if (t->last_straddle != -1)
 	{
 		chips_type amount = blind.amount;
@@ -351,18 +355,27 @@ void SitAndGoGameController::handleStraddle(Table *t)
 				break;
 			}
 			t->seats[seat_index].bet += amount;
-			pPlayer->stake -= amount;
+    	    pPlayer->stake -= amount;
+            
+            t->straddle_amount = amount;
 		} while (seat_index != t->last_straddle);
-	}
+	    t->cur_player = t->getNextActivePlayer(t->last_straddle);
+        t->last_bet_player = t->cur_player;
+    }
 
 	// set next round straddle
 	if (this->mandatory_straddle)
 	{
 		int next_rount_bb = t->getNextActivePlayer(t->bb);
 		t->last_straddle = t->getNextActivePlayer(next_rount_bb);
-	}
+	    t->straddle_rate = 2;
+    }
 	else
+    {
 		t->last_straddle = -1;
+        t->straddle_rate = 1; 
+    }
+
 }
 
 void SitAndGoGameController::handleWannaLeave(Table *t)
@@ -401,6 +414,10 @@ void SitAndGoGameController::handleWannaLeave(Table *t)
 			sb = t->getNextPlayer(bb);
 			t->last_straddle = t->getNextPlayer(sb);
 		}
+        else
+        {
+            t->last_straddle = -1;
+        }
 	}
 }
 
@@ -460,6 +477,7 @@ void SitAndGoGameController::stateBetting(Table *t)
         {
             if (t->bet_amount == 0 || t->bet_amount == t->seats[t->cur_player].bet)
             {
+                log_msg("test", "bet_amount %d,  %d", t->bet_amount, t->seats[t->cur_player].bet);
                 //chat(p->client_id, t->table_id, "You cannot call, nothing was bet! Try check.");
 
                 // retry with this action
@@ -468,6 +486,7 @@ void SitAndGoGameController::stateBetting(Table *t)
             }
             else if (t->bet_amount > t->seats[t->cur_player].bet + p->stake)
             {
+                log_msg("test", "bet_amount %d,  %d", t->bet_amount, t->seats[t->cur_player].bet + p->stake);
                 // simply convert this action to allin
                 p->next_action.action = Player::Allin;
                 return;
@@ -795,7 +814,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
 		unsigned int need_stake = 0;
 		if (ante > 0)
 		{
-			need_stake = blind.amount / 10 * ante;
+			need_stake = ante;
 		}
 
 		if (p->stake == 0 || p->stake < need_stake)
@@ -1017,6 +1036,7 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 			if (p == t->seats[pos].player)
 			{
 				t->last_straddle = pos;
+                t->straddle_rate *= 2;
 			}
 			else
 			{
@@ -1053,7 +1073,8 @@ bool SitAndGoGameController::nextRoundStraddle(int cid)
 	{
 		int pos = t->getNextActivePlayer(t->last_straddle);
 		
-		snap(t->seats[pos].player->client_id, t->table_id, SnapWantToStraddleNextRound);
+	    snprintf(msg, sizeof(msg), "%d", t->straddle_rate); 
+		snap(t->seats[pos].player->client_id, t->table_id, SnapWantToStraddleNextRound, msg);
 	}
 	
 	return true;
@@ -1091,7 +1112,9 @@ void SitAndGoGameController::handleWantToStraddleNextRound(Table *t)
 		cid = t->seats[pos].player->client_id;
 	}
     log_msg("straddle", "cid=%d", cid);
-	snap(cid, t->table_id, SnapWantToStraddleNextRound);
+	snprintf(msg, sizeof(msg), "%d", t->straddle_rate); 
+
+	snap(cid, t->table_id, SnapWantToStraddleNextRound, msg);
 }
 
 bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)

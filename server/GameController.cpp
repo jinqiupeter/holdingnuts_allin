@@ -743,7 +743,8 @@ void GameController::stateBlinds(Table *t)
             t->nomoreaction = true;
         }
     }
-
+    if (t->straddle_amount > t->bet_amount)
+        t->bet_amount = t->straddle_amount;
     t->betround = Table::Preflop;
     t->scheduleState(Table::Betting, 3);
 

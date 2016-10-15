@@ -36,6 +36,8 @@ Table::Table()
 	suspend_times = 0;
 	max_suspend_times = 0;
 	suspend_reason = NoReason;
+    straddle_amount = 0;
+    straddle_rate = 1;
 }
 
 int Table::getNextPlayer(unsigned int pos)

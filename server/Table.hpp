@@ -136,8 +136,10 @@ private:
 	int last_bet_player;
 	
 	chips_type bet_amount;
-	chips_type last_bet_amount;
+    chips_type straddle_amount;
+    chips_type last_bet_amount;
 	std::vector<Pot> pots;
+    int straddle_rate;
 };
 
 

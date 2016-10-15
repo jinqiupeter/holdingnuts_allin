@@ -1490,7 +1490,8 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
 		else if (infotype == "mandatory_straddle" && havearg)
 		{
 			ginfo.mandatory_straddle = Tokenizer::string2int(infoarg) ? 1 : 0;
-		}
+		    log_msg("Straddle", "create game mandatory_straddle %d", ginfo.mandatory_straddle);
+        }
 		else if (infotype == "password" && havearg)
 		{
 			if (infoarg.length() > 16)
