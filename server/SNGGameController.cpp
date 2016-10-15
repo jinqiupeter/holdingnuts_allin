@@ -537,7 +537,7 @@ void SNGGameController::stateBetting(Table *t)
 
             case Table::River:
                 // last_bet_player MUST show his hand
-                t->seats[t->last_bet_player].showcards = true;
+                t->seats[t->last_bet_player].auto_showcards = true;
 
                 // set the player behind last action as current player
                 t->cur_player = t->getNextActivePlayer(t->last_bet_player);

@@ -307,7 +307,7 @@ void GameController::snap(int cid, int tid, int sid, const char* msg)
     client_snapshot(game_id, tid, cid, sid, msg);
 }
 
-bool GameController::setPlayerAction(int cid, Player::PlayerAction action, chips_type amount)
+bool GameController::setPlayerAction(int cid, Player::PlayerAction action, chips_type arg)
 {
     Player *p = findPlayer(cid);
 
@@ -329,9 +329,19 @@ bool GameController::setPlayerAction(int cid, Player::PlayerAction action, chips
         p->sitout = false;
         return true;
     }
+    else if (action == Player::Show || action == Player::Muck)     
+    {
+        int which = arg;
+        p->holecards.setShowCard(which, action == Player::Show ? true : false);
+        p->next_action.valid = true;
+        p->next_action.action = action;
+        p->setTimedoutCount(0);
+
+        return true;
+    }
     p->next_action.valid = true;
     p->next_action.action = action;
-    p->next_action.amount = amount;
+    p->next_action.amount = arg;
     p->setTimedoutCount(0);
 
     return true;
@@ -387,17 +397,23 @@ void GameController::sendTableSnapshot(Table *t)
 
         // assemble hole-cards string
         string shole;
-        if (t->nomoreaction || s->showcards)
+        if (t->nomoreaction || s->auto_showcards)
         {
             vector<Card> cards;
 
             p->holecards.copyCards(&cards);
 
-            for (unsigned int i=0; i < cards.size(); i++)
+            for (unsigned int i=0; i < cards.size(); i++) {
+                shole += "_";
                 shole += cards[i].getName();
+            }
+        }
+        else if (t->state == Table::EndRound ) {
+            // user has decided to show 1 or 2 cards
+            shole += p->holecards.showCards();
         }
         else
-            shole = "-";
+            shole = "-_-";
 
         int pstate = 0;
         if (s->in_round)
@@ -655,7 +671,8 @@ void GameController::stateNewRound(Table *t)
             continue;
 
         t->seats[i].in_round = true;
-        t->seats[i].showcards = false;
+        t->seats[i].auto_showcards = false;
+        t->seats[i].manual_showcards = false;
         t->seats[i].bet = 0;
 
 
@@ -775,7 +792,7 @@ void GameController::stateAskShow(Table *t)
 
     if (!p->stake && t->countActivePlayers() > 1) // player went allin and has no option to show/muck
     {
-        t->seats[t->cur_player].showcards = true;
+        t->seats[t->cur_player].auto_showcards = true;
         chose_action = true;
         p->next_action.valid = false;
     }
@@ -789,7 +806,7 @@ void GameController::stateAskShow(Table *t)
         else if (p->next_action.action == Player::Show)
         {
             // show cards
-            t->seats[t->cur_player].showcards = true;
+            t->seats[t->cur_player].manual_showcards = true;
 
             chose_action = true;
         }
@@ -808,12 +825,12 @@ void GameController::stateAskShow(Table *t)
             // Note: client needs to determine if it's hand is
             //       already lost and needs to fold if wanted
             if (t->countActivePlayers() > 1)
-                t->seats[t->cur_player].showcards = true;
+                t->seats[t->cur_player].auto_showcards = true;
 
             chose_action = true;
         }
 #else /* SERVER_TESTING */
-        t->seats[t->cur_player].showcards = true;
+        t->seats[t->cur_player].auto_showcards = true;
         chose_action = true;
 #endif /* SERVER_TESTING */
     }
@@ -824,7 +841,7 @@ void GameController::stateAskShow(Table *t)
 
 
     // remember action for snapshot
-    if (t->seats[t->cur_player].showcards)
+    if (t->seats[t->cur_player].manual_showcards)
         p->last_action = Player::Show;
     else
         p->last_action = Player::Muck;
@@ -840,7 +857,7 @@ void GameController::stateAskShow(Table *t)
     else
     {
         // player is out if he don't want to show his cards
-        if (t->seats[t->cur_player].showcards == false)
+        if (t->seats[t->cur_player].manual_showcards == false)
             t->seats[t->cur_player].in_round = false;
 
 
@@ -868,7 +885,7 @@ void GameController::stateAllFolded(Table *t)
     Player *p = t->seats[t->cur_player].player;
 
     // send PlayerShow snapshot if cards were shown
-    if (t->seats[t->cur_player].showcards)
+    if (t->seats[t->cur_player].auto_showcards)
         sendPlayerShowSnapshot(t, p);
 
 
@@ -892,7 +909,7 @@ void GameController::stateShowdown(Table *t)
     // determine and send out PlayerShow snapshots
     for (unsigned int i=0; i < t->countActivePlayers(); i++)
     {
-        if (t->seats[showdown_player].showcards || t->nomoreaction)
+        if (t->seats[showdown_player].auto_showcards || t->nomoreaction)
         {
             Player *p = t->seats[showdown_player].player;
 
@@ -1014,7 +1031,7 @@ void GameController::stateShowdown(Table *t)
 
     sendTableSnapshot(t);
 
-    t->scheduleState(Table::EndRound, 4);
+    t->scheduleState(Table::EndRound, 2);
 }
 
 void GameController::stateDelay(Table *t)
