@@ -1108,7 +1108,9 @@ void GameController::placeTable(int offset, int total_players)
         dbg_msg("placing", "place_row=%d place_idx=%d place=%d player=%d",
                 place_row, place_idx, place, p->client_id);
 
-        seat->occupied = true;
+        if (p->getStake() >= blind.amount) {
+            seat->occupied = true;
+        }
         seat->player = (Player*)p;
 
         // FIXME: implement choosing dealer correctly

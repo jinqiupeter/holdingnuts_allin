@@ -157,7 +157,9 @@ bool SitAndGoGameController::arrangeSeat(int cid)
 		t->seats[i].auto_showcards = false;
 		t->seats[i].manual_showcards = false;
 		t->seats[i].bet = 0;
-		t->seats[i].occupied = true;
+        if (p->getStake() >= blind.amount) {
+            t->seats[i].occupied = true;
+        }
 
         p->setTableNo(t->getTableId());
         p->setSeatNo(i);
