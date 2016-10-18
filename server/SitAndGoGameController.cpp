@@ -750,7 +750,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 				{
                     t->resume_state = Table::BettingEnd;
 					t->suspend_reason = Table::BuyInsurace;
-					t->max_suspend_times = 15;
+					t->max_suspend_times = 40;
 					t->scheduleState(Table::Suspend, 1);
 				    return;
                 }
@@ -1169,15 +1169,81 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                     }
 
                     sort(p->insuraceInfo[round].outs.begin(), p->insuraceInfo[round].outs.end(), greater<Card>());
-                    
+                    /*
                     if (p->insuraceInfo[round].outs.size() > 0)
 					{
 						if ((round == 1) || (p->insuraceInfo[round].outs.size() <= 20 && round == 0))
                         {
                             if (round == 0)
-                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size() * 0.4);
+                            {
+                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size());
+                                
+                            }
                             else
-                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size() * 0.6);
+                            {
+                                // 第五张牌购买保险，最大赔付额度必须是
+                                p->insuraceInfo[round].max_payment += ceil(t->pots[i].amount / winers.size()) - p->insuraceInfo[0].buy_amount;
+                            }
+
+                            log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
+							ret = true;
+						}
+					}
+                    */
+				}
+			}
+		}
+	}
+
+	for (size_t i = 0; i < t->pots.size(); ++i)
+	{
+		if (t->pots[i].vseats.size() > 1)
+		{
+			vector<vector<HandStrength> > winlist;
+			vector<HandStrength> wl;
+			for (size_t j = 0; j < t->pots[i].vseats.size(); ++j)
+			{
+				unsigned int seat_id = t->pots[i].vseats[j];
+				Player *p = t->seats[seat_id].player;
+				HandStrength strength;
+				GameLogic::getStrength(&(p->holecards), &(t->communitycards), &strength);
+				strength.setId(seat_id);
+				wl.push_back(strength);
+			}
+			GameLogic::getWinList(wl, winlist);
+			if (winlist.size() > 1)
+			{
+				vector<HandStrength> winers = winlist[0];
+				
+				for (size_t j = 0; j < winers.size(); ++j)
+				{
+					int seat_id = winers[j].getId();
+					Player *p = t->seats[seat_id].player;
+
+                    if (p->insuraceInfo[round].outs.size() > 0)
+					{
+						if ((round == 1) || (p->insuraceInfo[round].outs.size() <= 20 && round == 0))
+                        {
+                            if (round == 0)
+                            {
+                                // 买入金额最大为底池1/3
+                                int buy_amount = t->pots[i].amount / winers.size() / 3;
+                                int payment = buy_amount * insurance_rate[p->insuraceInfo[round].outs.size()];
+                                if (payment > (int)(t->pots[i].amount / winers.size()) )
+                                {
+                                    // 当赔付额超过底池时，赔付额度为底池大小
+                                    p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();
+                                }
+                                else
+                                {
+                                    p->insuraceInfo[round].max_payment += payment;
+                                }
+                            }
+                            else
+                            {
+                                p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size() - p->insuraceInfo[0].buy_amount;
+                            }
+
                             log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
 							ret = true;
 						}
@@ -1186,8 +1252,8 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 			}
 		}
 	}
-
-	if (ret)
+	
+    if (ret)
 	{
 		ret = false;
 
@@ -1226,6 +1292,11 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                     else
                         snprintf(scard, sizeof(scard), ":%c%c", p->insuraceInfo[round].outs_divided[j].getFaceSymbol(), p->insuraceInfo[round].outs_divided[j].getSuitSymbol());
                     smsg_divide_outs += scard;
+                }
+
+                if (p->insuraceInfo[round].outs_divided.size() == 0)
+                {
+                    smsg_divide_outs = "0";
                 }
 
 				std::string smsg_others;
