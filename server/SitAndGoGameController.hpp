@@ -79,6 +79,7 @@ public:
 	void handleInsuranceBenefits(Table *t, unsigned int round);
 	bool clientBuyInsurance(int cid, chips_type buy_amount, std::vector<Card> & cards);
     bool arrangeSeat(int cid);
+    void takeSeat(Table *t, int seat_no, Player *p);
     bool addPlayer(int cid, const std::string &uuid, chips_type player_stake);
 	bool removePlayer(int cid);
 	bool resumePlayer(int cid);
