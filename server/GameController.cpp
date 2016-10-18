@@ -858,8 +858,8 @@ void GameController::stateAskShow(Table *t)
     else
     {
         // player is out if he don't want to show his cards
-        if (t->seats[t->cur_player].manual_showcards == false)
-            t->seats[t->cur_player].in_round = false;
+       // if (t->seats[t->cur_player].manual_showcards == false)
+        //    t->seats[t->cur_player].in_round = false;
 
 
         if (t->getNextActivePlayer(t->cur_player) == t->last_bet_player)
@@ -1108,8 +1108,11 @@ void GameController::placeTable(int offset, int total_players)
         dbg_msg("placing", "place_row=%d place_idx=%d place=%d player=%d",
                 place_row, place_idx, place, p->client_id);
 
+        seat->auto_showcards = false;
+        seat->manual_showcards = false;
+        seat->occupied = true;
         if (p->getStake() >= blind.amount) {
-            seat->occupied = true;
+            seat->in_round = true;
         }
         seat->player = (Player*)p;
 

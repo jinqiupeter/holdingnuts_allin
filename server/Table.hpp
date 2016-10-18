@@ -97,6 +97,9 @@ public:
 	unsigned int removePlayer(int seat_no);
 	bool isAllin();
 	void resetLastPlayerActions();
+
+    int getSeatNumber(int cid);
+    bool isSeatAvailable(int seat_no);
 	
 	void collectBets();
 	bool isSeatInvolvedInPot(Pot *pot, unsigned int s);

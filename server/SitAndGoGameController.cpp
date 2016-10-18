@@ -133,6 +133,27 @@ unsigned int randomSeat()
     return randNum;
 }
 
+void SitAndGoGameController::takeSeat(Table *t, int seat_no, Player *p)
+{
+    if (seat_no < 0)
+        return;
+
+    t->seats[seat_no].in_round = false;
+    t->seats[seat_no].auto_showcards = false;
+    t->seats[seat_no].manual_showcards = false;
+    t->seats[seat_no].occupied = true;
+    t->seats[seat_no].bet = 0;
+    if (p->getStake() >= blind.amount) {
+        t->seats[seat_no].in_round = true;
+    }
+
+    p->setTableNo(t->getTableId());
+    p->setSeatNo(seat_no);
+    t->seats[seat_no].player = p;
+    
+    log_msg("game", "placing player %d at seat %d", p->client_id, seat_no);
+}
+
 bool SitAndGoGameController::arrangeSeat(int cid)
 {
 	Player *p = findPlayer(cid);
@@ -147,25 +168,22 @@ bool SitAndGoGameController::arrangeSeat(int cid)
     }
     Table *t = e->second;
 
+    // place at last seat if possible
+    int last_seat = p->getSeatNo();
+    if (last_seat >= 0 && t->isSeatAvailable(last_seat)) {
+        takeSeat(t, last_seat, p);
+        return true;
+    }
+
     while(true)
 	{
         int i = randomSeat();
-		if (t->seats[i].occupied)
-			continue;
-		
-		t->seats[i].in_round = false;
-		t->seats[i].auto_showcards = false;
-		t->seats[i].manual_showcards = false;
-		t->seats[i].bet = 0;
-        if (p->getStake() >= blind.amount) {
-            t->seats[i].occupied = true;
+        bool available = t->isSeatAvailable(i);
+		if (!available) {
+            continue;
         }
-
-        p->setTableNo(t->getTableId());
-        p->setSeatNo(i);
-		t->seats[i].player = (Player*)p;
 		
-		log_msg("game", "placing player %d at seat %d", cid, i);
+        takeSeat(t, i, p);
         break;
 	}
 
@@ -243,6 +261,11 @@ bool SitAndGoGameController::resumePlayer(int cid)
 	if (!p)
 		return false;
 	
+    if (!arrangeSeat(cid)) {
+        log_msg("game ", "failed to arrange seat for player %d", cid);
+        return false;
+    }
+
     //mark the player wanna_leave instead of removing it
     p->wanna_leave = false;
 
@@ -307,10 +330,11 @@ void SitAndGoGameController::handleRebuy(Table *t)
         p->setStake(p->getStake() + p->getRebuyStake());
         p->setRebuyStake(0); //clear rebuy stake so it wont be added next time
 
-		if (t->seats[p->getSeatNo()].occupied == false && p->getStake() >= amount)
+		if (p->getStake() >= amount)
 		{
             // player has gone broken and rebought, mark him as occupied so he can join next round
             t->seats[p->getSeatNo()].occupied = true;
+            t->seats[p->getSeatNo()].in_round = true;
         }
         e++;
     }
@@ -394,8 +418,9 @@ void SitAndGoGameController::handleWannaLeave(Table *t)
             // remove player from occupied seat
             t->removePlayer(e->second->getSeatNo());
 
-            delete e->second;
-            players.erase(e);
+            // do not actually delete so the user can possibly reuse the same seat no if he rejoins
+            //delete e->second;
+            //players.erase(e);
 			someone_leave = true;
         }
         e++;
@@ -428,7 +453,7 @@ void SitAndGoGameController::stateNewRound(Table *t)
 {
     handleRebuy(t);
     handleWannaLeave(t);
-    if (t->countPlayers() < 2) 
+    if (t->countActivePlayers() < 2) 
         return;
 
     GameController::stateNewRound(t);
@@ -551,12 +576,17 @@ void SitAndGoGameController::stateBetting(Table *t)
     { 
         // handle player timeout
 #ifndef SERVER_TESTING
-        if ( (unsigned int)difftime(time(NULL), t->timeout_start) > p->getTimeout())
+        if (p->sitout || (unsigned int)difftime(time(NULL), t->timeout_start) > p->getTimeout())
         {
+            if (!p->sitout) {
+                p->setTimedoutCount(p->getTimedoutCount() + 1);
+            }
             // if player timed out more than 3 times, mark user as wanna leave
-            p->setTimedoutCount(p->getTimedoutCount() + 1);
             if (p->getTimedoutCount() >= 3) {
+                p->sitout = true;
+                p->setTimedoutCount(0);
                 p->wanna_leave = true;
+                t->seats[t->cur_player].in_round = false;
                 log_msg("game", "player %d timed out more thatn 3 time, marking as wanna_leave", p->getClientId());
             }
 

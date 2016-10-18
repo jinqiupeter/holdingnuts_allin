@@ -142,6 +142,16 @@ unsigned int Table::countPlayers()
 	return count;
 }
 
+int Table::getSeatNumber(int cid)
+{
+	for (unsigned int i=0; i < 10; i++) {
+		if (seats[i].player && seats[i].player->client_id == cid)
+            return i;
+	}
+
+    return -1;
+}
+
 unsigned int Table::countActivePlayers()
 {
 	unsigned int count = 0;
@@ -166,6 +176,13 @@ unsigned int Table::removePlayer(int seat_no)
     }
 
     return seat_no;
+}
+
+bool Table::isSeatAvailable(int seat_no)
+{
+    return (seats[seat_no].player == NULL 
+        && seats[seat_no].occupied == false
+        && seats[seat_no].in_round == false);
 }
 
 // all (or except one) players are allin
