@@ -330,7 +330,7 @@ void SitAndGoGameController::handleRebuy(Table *t)
         p->setStake(p->getStake() + p->getRebuyStake());
         p->setRebuyStake(0); //clear rebuy stake so it wont be added next time
 
-		if (p->getStake() >= amount)
+		if (p->getStake() >= amount && !p->wanna_leave)
 		{
             // player has gone broken and rebought, mark him as occupied so he can join next round
             t->seats[p->getSeatNo()].occupied = true;
@@ -413,7 +413,7 @@ void SitAndGoGameController::handleWannaLeave(Table *t)
 	bool someone_leave = false;
     for (players_type::iterator e = players.begin(); e != players.end();)
     {
-        if (e->second->wanna_leave) {
+        if (e->second->wanna_leave && !t->isSeatAvailable(e->second->getSeatNo())) {
             log_msg("game", "deleting player %d since it's marked as wanna_leave", e->second->client_id);
             // remove player from occupied seat
             t->removePlayer(e->second->getSeatNo());
