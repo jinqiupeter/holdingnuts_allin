@@ -93,6 +93,7 @@ public:
 private:
     int expire_in;  // game is expiring in expire_in seconds
 	std::map<unsigned, float> insurance_rate;
+    bool hasAskBuyInsurance[2];
 };
 
 #endif /* _SITANDGOGAMECONTROLLER_H */

@@ -467,12 +467,15 @@ void SitAndGoGameController::stateBlinds(Table *t)
     GameController::stateBlinds(t);
 
 	handleWantToStraddleNextRound(t);
+    this->hasAskBuyInsurance[0] = false;
+    this->hasAskBuyInsurance[1] = false;
 }
 
 void SitAndGoGameController::stateBetting(Table *t)
 {
+    
     Player *p = t->seats[t->cur_player].player;
-
+    
     bool allowed_action = false;  // is action allowed?
     bool auto_action = false;
 
@@ -698,8 +701,29 @@ void SitAndGoGameController::stateBetting(Table *t)
             // no further action at table possible
             t->nomoreaction = true;
         }
+        
+        if (t->nomoreaction && enable_insurance)
+        {
+            if (t->betround == Table::Flop || t->betround == Table::Turn)
+		    {
+                log_msg("insurance", "betround flop or turn, nomoreaction=%d", t->nomoreaction);
+			    unsigned int round = 0;
+			    if (t->betround == Table::Turn)
+				    round = 1;
 
-
+			    if (hasAskBuyInsurance[round] == false && handleBuyInsurance(t, round))
+			    {   
+                    t->resume_state = Table::BettingEnd;
+				    t->suspend_reason = Table::BuyInsurace;
+				    t->max_suspend_times = 20;
+				    t->scheduleState(Table::Suspend, 1);
+                    hasAskBuyInsurance[round] = true;
+                    
+                    return;
+                }
+                hasAskBuyInsurance[round] = true;
+            }
+        }
         // which betting round is next?
         switch ((int)t->betround)
         {
@@ -768,8 +792,8 @@ void SitAndGoGameController::stateBetting(Table *t)
         t->last_bet_player = t->cur_player;
 
         t->resetLastPlayerActions();
-
-		if (t->betround == Table::Flop || t->betround == Table::Turn)
+   /* 
+        if (t->betround == Table::Flop || t->betround == Table::Turn)
 		{
             log_msg("insurance", "betround flop or turn, nomoreaction=%d", t->nomoreaction);
 			unsigned int round = 0;
@@ -787,8 +811,8 @@ void SitAndGoGameController::stateBetting(Table *t)
 				    return;
                 }
 			}
-		}
-
+        }
+    */
         t->scheduleState(Table::BettingEnd, 2);
     }
     else
@@ -813,7 +837,7 @@ void SitAndGoGameController::stateBetting(Table *t)
 #if 0
     // tell player it's his turn
     p = t->seats[t->cur_player].player;
-    if (!t->nomoreaction && p->stake > 0)
+    if (!t->nomoreaction && p-stake > 0)
         snap(p->client_id, t->table_id, SnapPlayerCurrent);
 #endif
 }
