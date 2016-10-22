@@ -170,14 +170,22 @@ bool SitAndGoGameController::arrangeSeat(int cid)
 
     // place at last seat if possible
     int last_seat = p->getSeatNo();
-    if (last_seat >= 0 && t->isSeatAvailable(last_seat)) {
-        takeSeat(t, last_seat, p);
+    if (last_seat >= 0) {
+        if( // take the seat if it's available
+            t->isSeatAvailable(last_seat) 
+            // or if it's not available but it was taken by the same player
+         || (!t->isSeatAvailable(last_seat) && t->seats[last_seat].player->client_id == p->client_id)) {
+                takeSeat(t, last_seat, p);
+        }
         return true;
     }
 
-    while(true)
+    int tried = 0;
+    while(true && tried <= 10)
 	{
         int i = randomSeat();
+        tried++;
+		log_msg("SitAndGoGameController", "trying to arrange seat %d, available %d", i, t->isSeatAvailable(i));
         bool available = t->isSeatAvailable(i);
 		if (!available) {
             continue;
@@ -261,6 +269,7 @@ bool SitAndGoGameController::resumePlayer(int cid)
 	if (!p)
 		return false;
 	
+    log_msg("game ", "arranging seat for player %d", cid);
     if (!arrangeSeat(cid)) {
         log_msg("game ", "failed to arrange seat for player %d", cid);
         return false;
