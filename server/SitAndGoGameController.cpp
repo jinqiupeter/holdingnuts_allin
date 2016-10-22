@@ -1303,6 +1303,10 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                             log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
 							ret = true;
 						}
+                        else
+                        {
+                            log_msg("Insurance", "round 0 outs size > 20");
+                        }
 					}
 				}
 			}
@@ -1453,7 +1457,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 		return false;
 	}
 
-	if (p->insuraceInfo[round].bought)
+	if (p->insuraceInfo[round].bought || p->insuraceInfo[round].outs.size() == 0)
 	{
 		log_msg("clientBuyInsurance", "insurance has bought");
 		return false;
@@ -1482,7 +1486,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 			}
 			if (!find)
 			{
-				log_msg("clientBuyInsurance", "buy card not in outs");
+				log_msg("clientBuyInsurance", "buy card not in outs, round = %d , outs size = %d", round, p->insuraceInfo[round].outs.size());
 				return false;
 			}
 		}

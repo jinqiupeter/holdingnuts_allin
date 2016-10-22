@@ -575,7 +575,7 @@ bool send_gameinfo(clientcon *client, int gid)
 		state = GameStateWaiting;
 	
 	snprintf(msg, sizeof(msg),
-		"GAMEINFO %d %d:%d:%d:%d:%d:%d:%d:%d %d:%d:%d:%d:%d \"%s\"",
+		"GAMEINFO %d %d:%d:%d:%d:%d:%d:%d:%d %d:%d:%d:%d:%d:%d \"%s\"",
 		gid,
 		(int) GameTypeHoldem,
 		game_mode,
@@ -594,7 +594,8 @@ bool send_gameinfo(clientcon *client, int gid)
 		g->getBlindsTime(),
  		g->getAnte(),
 		(g->getMandatoryStraddle() ? 1 : 0),
-		g->getName().c_str());
+		(g->getEnableInsurance() ? 1 : 0),
+        g->getName().c_str());
 	
 	send_msg(client->sock, msg);
 	
