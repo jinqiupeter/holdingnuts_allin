@@ -100,6 +100,7 @@ void SitAndGoGameController::reset()
 	blind.blindrule = BlindNone;	
 	
     status = Created;
+    created_time = time(NULL);
 	hand_no = 0;
 	
 	// remove all players
@@ -138,20 +139,20 @@ void SitAndGoGameController::takeSeat(Table *t, int seat_no, Player *p)
     if (seat_no < 0)
         return;
 
+    log_msg("game", "placing player %d at seat %d", p->client_id, seat_no);
+
     t->seats[seat_no].in_round = false;
     t->seats[seat_no].auto_showcards = false;
     t->seats[seat_no].manual_showcards = false;
     t->seats[seat_no].occupied = true;
-    t->seats[seat_no].bet = 0;
     if (p->getStake() >= blind.amount) {
         t->seats[seat_no].in_round = true;
     }
 
     p->setTableNo(t->getTableId());
     p->setSeatNo(seat_no);
+    p->sitout = false;
     t->seats[seat_no].player = p;
-    
-    log_msg("game", "placing player %d at seat %d", p->client_id, seat_no);
 }
 
 bool SitAndGoGameController::arrangeSeat(int cid)
@@ -205,8 +206,9 @@ bool SitAndGoGameController::addPlayer(int cid, const std::string &uuid, chips_t
 		return false;
 	
 	// is the client already a player?
-	if (isPlayer(cid))
+	if (isPlayer(cid)) {
 		return false;
+    }
 	
 	// remove from spectators list as we would receive the snapshots twice
 	if (isSpectator(cid))
@@ -246,7 +248,7 @@ bool SitAndGoGameController::removePlayer(int cid)
         return true;
 
     // fold players hole card before remove
-    setPlayerAction(cid, Player::Fold, 0);
+    // setPlayerAction(cid, Player::Fold, 0);
 
     //mark the player wanna_leave instead of removing it
     p->wanna_leave = true;
@@ -277,6 +279,38 @@ bool SitAndGoGameController::resumePlayer(int cid)
 
     //mark the player wanna_leave instead of removing it
     p->wanna_leave = false;
+
+	tables_type::iterator e = tables.begin();
+	Table *t = e->second;
+
+    // send player's holecards if table state > Pre-flop
+    if (t->state > Table::Blinds) {
+        sendTableSnapshot(t);
+
+        vector<Card> cards;
+        p->holecards.copyCards(&cards);
+        char card1[3], card2[3];
+        strcpy(card1, cards[0].getName());
+        strcpy(card2, cards[1].getName());
+        snprintf(msg, sizeof(msg), "%d %s %s",
+                SnapCardsHole, card1, card2);
+        snap(p->client_id, p->getTableNo(), SnapCards, msg);
+    }
+
+    // send cc cards if any
+    /*
+    if (t->betround > Table::Preflop) {
+        vector<Card> cards;
+        t->communitycards.copyCards(&cards);
+        string sccards;
+        for (unsigned int i=0; i < cards.size(); i++) {
+            sccards += " ";
+            sccards += string(cards[i].getName());
+        }
+        snprintf(msg, sizeof(msg), "%d %s", SnapCardsCommunity, sccards.c_str());
+        snap(p->client_id, p->getTableNo(), SnapCards, msg);
+    }
+    */
 
 	return true;
 }
@@ -801,27 +835,6 @@ void SitAndGoGameController::stateBetting(Table *t)
         t->last_bet_player = t->cur_player;
 
         t->resetLastPlayerActions();
-   /* 
-        if (t->betround == Table::Flop || t->betround == Table::Turn)
-		{
-            log_msg("insurance", "betround flop or turn, nomoreaction=%d", t->nomoreaction);
-			unsigned int round = 0;
-			if (t->betround == Table::Turn)
-				round = 1;
-
-			if (t->nomoreaction && enable_insurance)
-			{
-				if (handleBuyInsurance(t, round))
-				{
-                    t->resume_state = Table::BettingEnd;
-					t->suspend_reason = Table::BuyInsurace;
-					t->max_suspend_times = 40;
-					t->scheduleState(Table::Suspend, 1);
-				    return;
-                }
-			}
-        }
-    */
         t->scheduleState(Table::BettingEnd, 2);
     }
     else
@@ -998,6 +1011,15 @@ void SitAndGoGameController::start()
     started_time = time(NULL);
 }
 
+void SitAndGoGameController::expire() 
+{
+    status = Ended;
+    ended_time = time(NULL);
+
+    snprintf(msg, sizeof(msg), "%d", SnapGameStateEnd);
+    snap(-1, SnapGameState, msg);
+}
+
 int SitAndGoGameController::tick()
 {
     if (status == Created)
@@ -1005,6 +1027,11 @@ int SitAndGoGameController::tick()
         if ( getPlayerCount() >= 1)   {// for Sit&Go , start game if player count >= 1
             log_msg("game", "starting Sit&Go game %d", getGameId());
             start();
+        }
+        // handle expiration
+        else if (difftime(time(NULL), created_time) >= expire_in) { 
+            expire();
+            return 0;
         }
         else	// nothing to do, exit early
             return 0;
@@ -1054,12 +1081,8 @@ int SitAndGoGameController::tick()
     }
 
     // handle expiration
-    if (difftime(time(NULL), started_time) >= expire_in) { // SNT & MTT games don't expire
-        status = Ended;
-        ended_time = time(NULL);
-
-        snprintf(msg, sizeof(msg), "%d", SnapGameStateEnd);
-        snap(-1, SnapGameState, msg);
+    if (difftime(time(NULL), started_time) >= expire_in) { 
+        expire();
     }
 
     return 0;

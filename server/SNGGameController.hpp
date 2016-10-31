@@ -68,6 +68,7 @@ public:
 	bool removePlayer(int cid);
 	
 	void start() ;
+    void expire();
 	int tick();
 	
     void addBlindLevels();

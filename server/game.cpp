@@ -950,20 +950,18 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 	{
         if (g->getGameType() == GameController::RingGame)
 		{
+            send_ok_game(gid, client);
+            // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
+            send_gameinfo(client, gid);
             if(!g->resumePlayer(client->id)) 
 			{
                 send_err(client, 0 /*FIXME*/, "Could not resume player");
                 return 1;
             } 
-			else 
-			{
-                send_ok_game(gid, client);
-                // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
-                send_gameinfo(client, gid);
-                // send playerlist to all registered players
-                send_playerlist_all(gid);
-                return 0;
-            }
+
+            // send playerlist to all registered players
+            send_playerlist_all(gid);
+            return 0;
         } 
 		else 
 		{
@@ -1530,7 +1528,6 @@ int client_cmd_create(clientcon *client, Tokenizer &t)
         if (ginfo.type == GameController::RingGame) {
             g = new SitAndGoGameController();
             ((SitAndGoGameController*)g)->setExpireIn(ginfo.expire_in);
-
         } else if (ginfo.type == GameController::SNG) {
             g = new SNGGameController();
         }

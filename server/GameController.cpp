@@ -468,11 +468,12 @@ void GameController::sendTableSnapshot(Table *t)
     else
     {
         char tmp[128];
-        snprintf(tmp, sizeof(tmp), "%d:%d:%d:%d:%d",
+        snprintf(tmp, sizeof(tmp), "%d:%d:%d:%d:%d:%d",
                 t->seats[t->dealer].seat_no,
                 t->seats[t->sb].seat_no,
                 t->seats[t->bb].seat_no,
                 (t->cur_player == -1) ? -1 : (int)t->seats[t->cur_player].seat_no,
+                (t->cur_player == -1) ? -1 : (int)(t->seats[t->cur_player].player->getTimeout() - difftime(time(NULL), t->timeout_start)), // how much time left for current player to act
                 t->seats[t->last_bet_player].seat_no);
         sturn = tmp;
     }

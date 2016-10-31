@@ -85,6 +85,7 @@ public:
 	bool resumePlayer(int cid);
 	
 	void start() ;
+    void expire();
 	int tick();
 	
     void setExpireIn(int iExpireIn) { expire_in = iExpireIn; };
