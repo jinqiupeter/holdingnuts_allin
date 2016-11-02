@@ -227,6 +227,7 @@ public:
 	int game_id;
 	
     time_t started_time;
+    time_t created_time;
     bool paused;
 	unsigned int max_players;
 	

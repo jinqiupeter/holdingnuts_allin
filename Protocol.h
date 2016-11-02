@@ -82,6 +82,7 @@ typedef enum {
 	SnapCardsFlop		= 0x2,
 	SnapCardsTurn		= 0x3,
 	SnapCardsRiver		= 0x4,
+    SnapCardsCommunity  = 0x5,
 } snap_cards_type;
 
 //! \brief Snapshot player-action types
