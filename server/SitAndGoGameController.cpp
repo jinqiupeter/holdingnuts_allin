@@ -141,13 +141,15 @@ void SitAndGoGameController::takeSeat(Table *t, int seat_no, Player *p)
 
     log_msg("game", "placing player %d at seat %d", p->client_id, seat_no);
 
-    t->seats[seat_no].in_round = false;
+    //t->seats[seat_no].in_round = false;
     t->seats[seat_no].auto_showcards = false;
     t->seats[seat_no].manual_showcards = false;
     t->seats[seat_no].occupied = true;
+    /*
     if (p->getStake() >= blind.amount) {
         t->seats[seat_no].in_round = true;
     }
+    */
 
     p->setTableNo(t->getTableId());
     p->setSeatNo(seat_no);
@@ -277,14 +279,13 @@ bool SitAndGoGameController::resumePlayer(int cid)
         return false;
     }
 
-    //mark the player wanna_leave instead of removing it
     p->wanna_leave = false;
 
 	tables_type::iterator e = tables.begin();
 	Table *t = e->second;
 
     // send player's holecards if table state > Pre-flop
-    if (t->state > Table::Blinds) {
+    if (t->state > Table::Blinds && t->seats[p->getSeatNo()].in_round) {
         sendTableSnapshot(t);
 
         vector<Card> cards;
@@ -296,21 +297,6 @@ bool SitAndGoGameController::resumePlayer(int cid)
                 SnapCardsHole, card1, card2);
         snap(p->client_id, p->getTableNo(), SnapCards, msg);
     }
-
-    // send cc cards if any
-    /*
-    if (t->betround > Table::Preflop) {
-        vector<Card> cards;
-        t->communitycards.copyCards(&cards);
-        string sccards;
-        for (unsigned int i=0; i < cards.size(); i++) {
-            sccards += " ";
-            sccards += string(cards[i].getName());
-        }
-        snprintf(msg, sizeof(msg), "%d %s", SnapCardsCommunity, sccards.c_str());
-        snap(p->client_id, p->getTableNo(), SnapCards, msg);
-    }
-    */
 
 	return true;
 }
