@@ -145,11 +145,6 @@ void SitAndGoGameController::takeSeat(Table *t, int seat_no, Player *p)
     t->seats[seat_no].auto_showcards = false;
     t->seats[seat_no].manual_showcards = false;
     t->seats[seat_no].occupied = true;
-    /*
-    if (p->getStake() >= blind.amount) {
-        t->seats[seat_no].in_round = true;
-    }
-    */
 
     p->setTableNo(t->getTableId());
     p->setSeatNo(seat_no);

@@ -1112,9 +1112,6 @@ void GameController::placeTable(int offset, int total_players)
         seat->auto_showcards = false;
         seat->manual_showcards = false;
         seat->occupied = true;
-        if (p->getStake() >= blind.amount) {
-            seat->in_round = true;
-        }
         seat->player = (Player*)p;
 
         // FIXME: implement choosing dealer correctly
