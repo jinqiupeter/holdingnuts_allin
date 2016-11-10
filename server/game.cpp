@@ -987,15 +987,6 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 		}
 	}
 	
-	// password is controled by gbc
-    /*
-	if (!g->checkPassword(passwd))
-	{
-		send_err(client, 0,  "unable to register, wrong password");
-		return 1;
-	}
-    */
-	
 	if (!g->addPlayer(client->id, client->uuid, player_stake))
 	{
 		send_err(client, 0 /*FIXME*/, "unable to register");
