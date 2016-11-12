@@ -1406,9 +1406,25 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
 						smsg_others += '-';
 					}
 				}
+                int min_buy = 0;
+                if (round == 1)
+                {
+				    if (p->insuraceInfo[0].bought)
+				    {
+					    if (p->insuraceInfo[1].outs.size() > 0)
+					    {
+						    size_t rate_index = p->insuraceInfo[1].outs.size();
+						    if (rate_index > 20)
+                                rate_index = 20;
+					    	min_buy = ceil(p->insuraceInfo[0].buy_amount / insurance_rate[rate_index]);
+                        }
+                    }
+                }
 
-				snprintf(msg, sizeof(msg), "%d %s %s %s",
+
+				snprintf(msg, sizeof(msg), "%d %d %s %s %s",
 					p->insuraceInfo[round].max_payment, 
+                    min_buy,
                     smsg_outs.c_str(),
                     smsg_divide_outs.c_str(),
 					smsg_others.c_str());
