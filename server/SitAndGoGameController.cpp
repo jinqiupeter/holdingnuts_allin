@@ -868,7 +868,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
     // find broken players
     for (unsigned int i=0; i < 10; i++)
     {
-        if (!(t->seats[i].occupied && t->seats[i].in_round))
+        if (!(t->seats[i].occupied ))
             continue;
 
         Player *p = t->seats[i].player;
