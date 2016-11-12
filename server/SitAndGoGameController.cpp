@@ -1480,7 +1480,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 	{
 		// ²»¹ºÂò±£ÏÕ
 		p->insuraceInfo[round].every_single_outs.clear();
-		p->insuraceInfo[round].outs.clear();
+		// p->insuraceInfo[round].outs.clear();
 	}
 	else
 	{
@@ -1533,7 +1533,7 @@ bool SitAndGoGameController::clientBuyInsurance(int cid, chips_type buy_amount, 
 	{
 		pos = t->getNextActivePlayer(pos);
 		Player *player = t->seats[pos].player;
-		if (player->insuraceInfo[round].outs.size() > 0 && player->insuraceInfo[round].bought == false)
+		if (player->insuraceInfo[round].every_single_outs.size() > 0 && player->insuraceInfo[round].bought == false)
 		{
 			all_bought = false;
 			break;
@@ -1677,7 +1677,8 @@ void SitAndGoGameController::stateResume(Table * t)
 {
 	if (t->suspend_reason == Table::BuyInsurace)
 	{
-		// µÚËÄÂÖ¹ºÂò±£ÏÕµÄµÚÎåÂÖ±ØÐë¹ºÂò
+		//log_msg("insurance", "state resume %d", t->betround);
+        // µÚËÄÂÖ¹ºÂò±£ÏÕµÄµÚÎåÂÖ±ØÐë¹ºÂò
 		if (t->betround == Table::Turn)
 		{
 			unsigned int pos = t->dealer;
@@ -1686,6 +1687,7 @@ void SitAndGoGameController::stateResume(Table * t)
 				pos = t->getNextActivePlayer(pos);
                 Player *p = t->seats[pos].player;
 
+                log_msg("insurance", "p0 bought = %d p1 bought = %d, p1 outs %d", (int)(p->insuraceInfo[0].bought), (int)(p->insuraceInfo[1].bought), p->insuraceInfo[1].outs.size());
 				if (p->insuraceInfo[0].bought && !p->insuraceInfo[1].bought)
 				{
 					if (p->insuraceInfo[1].outs.size() > 0)
@@ -1696,9 +1698,22 @@ void SitAndGoGameController::stateResume(Table * t)
 						if (rate_index > 20)
                             rate_index = 20;
 						p->insuraceInfo[1].buy_amount = ceil(p->insuraceInfo[0].buy_amount / insurance_rate[rate_index]);
-					}
+				        log_msg("insurance", "take back bought %d", p->insuraceInfo[1].buy_amount);
+                    }
 				}
-
+                if (p->insuraceInfo[0].bought && p->insuraceInfo[1].bought)
+                {
+                    //计算第五轮收益，是否比第四轮购买的保险数量要小
+				    size_t rate_index = p->insuraceInfo[1].buy_cards.size();
+					if (rate_index > 20)
+                        rate_index = 20;
+                    chips_type benefits = p->insuraceInfo[1].buy_amount * insurance_rate[rate_index];
+                    if (benefits < p->insuraceInfo[0].buy_amount)
+                    {
+                        p->insuraceInfo[1].buy_amount = ceil(benefits / insurance_rate[rate_index] );
+                        log_msg("insurance", "1 take back bought %d", p->insuraceInfo[1].buy_amount);
+                    }
+                }
 	    	}
         }    
 	}
