@@ -1322,7 +1322,7 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                             }
                             else
                             {
-                                p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size() - p->insuraceInfo[0].buy_amount;
+                                p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();// - p->insuraceInfo[0].buy_amount;
                             }
 
                             log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
@@ -1412,13 +1412,7 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                 {
 				    if (p->insuraceInfo[0].bought)
 				    {
-					    if (p->insuraceInfo[1].outs.size() > 0)
-					    {
-						    size_t rate_index = p->insuraceInfo[1].outs.size();
-						    if (rate_index > 20)
-                                rate_index = 20;
-					    	min_buy = ceil(p->insuraceInfo[0].buy_amount / insurance_rate[rate_index]);
-                        }
+					    min_buy = p->insuraceInfo[0].buy_amount;
                     }
                 }
 
@@ -1628,7 +1622,7 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 		Player *p = t->seats[pos].player;
 
 		// ÅÐ¶Ï±£ÏÕÊÇ·ñÂòÖÐ
-		if (p->insuraceInfo[round].bought)
+        if (p->insuraceInfo[round].bought)
 		{
 			do 
 			{
@@ -1703,6 +1697,7 @@ void SitAndGoGameController::handleInsuranceBenefits(Table *t, unsigned int roun
 
 void SitAndGoGameController::stateResume(Table * t)
 {
+   
 	if (t->suspend_reason == Table::BuyInsurace)
 	{
 		//log_msg("insurance", "state resume %d", t->betround);
@@ -1745,6 +1740,7 @@ void SitAndGoGameController::stateResume(Table * t)
 	    	}
         }    
 	}
+    
 	GameController::stateResume(t);
 }
 
