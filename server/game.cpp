@@ -950,15 +950,15 @@ int client_cmd_register(clientcon *client, Tokenizer &t)
 	{
         if (g->getGameType() == GameController::RingGame)
 		{
-            send_ok_game(gid, client);
-            // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
-            send_gameinfo(client, gid);
             if(!g->resumePlayer(client->id)) 
 			{
                 send_err(client, 0 /*FIXME*/, "Could not resume player");
                 return 1;
             } 
 
+            send_ok_game(gid, client);
+            // send gameinfo so user gbc can update user_game_history.joined_at = 0 for current user
+            send_gameinfo(client, gid);
             // send playerlist to all registered players
             send_playerlist_all(gid);
             return 0;
