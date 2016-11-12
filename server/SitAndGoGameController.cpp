@@ -199,8 +199,14 @@ bool SitAndGoGameController::arrangeSeat(int cid)
 bool SitAndGoGameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
 {
 	// is the game full?
-	if (players.size() == max_players)
-		return false;
+    if (tables.size() > 0) {
+        //already have some players
+        tables_type::iterator e = tables.begin();
+        Table *t = e->second;
+        if (t && t->countActivePlayers() == max_players) {
+            return false;
+        }
+    }
 	
 	// is the client already a player?
 	if (isPlayer(cid)) {
