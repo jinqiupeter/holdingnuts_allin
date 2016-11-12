@@ -374,7 +374,7 @@ void SitAndGoGameController::handleAnte(Table *t)
 		ante_amount = ante;//blind.amount / 10 * ante;
 		for (unsigned int i = 0; i < 10; ++i)
 		{
-			if (!t->seats[i].occupied)
+			if (!(t->seats[i].occupied && t->seats[i].in_round))
 				continue;
 
 			Player *p = t->seats[i].player;
@@ -856,7 +856,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
     // find broken players
     for (unsigned int i=0; i < 10; i++)
     {
-        if (!t->seats[i].occupied)
+        if (!(t->seats[i].occupied && t->seats[i].in_round))
             continue;
 
         Player *p = t->seats[i].player;
