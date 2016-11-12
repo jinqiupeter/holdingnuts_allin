@@ -390,7 +390,7 @@ void GameController::sendTableSnapshot(Table *t)
     {
         Table::Seat *s = &(t->seats[i]);
 
-        if (!s->occupied)
+        if (!(t->seats[i].occupied))
             continue;
 
         Player *p = s->player;
@@ -550,7 +550,7 @@ void GameController::dealHole(Table *t)
     // player in small blind gets first cards
     for (unsigned int i = t->sb, c=0; c < t->countPlayers(); i = t->getNextPlayer(i))
     {
-        if (!t->seats[i].occupied)
+        if (!(t->seats[i].occupied && t->seats[i].in_round))
             continue;
 
         Player *p = t->seats[i].player;
@@ -671,13 +671,16 @@ void GameController::stateNewRound(Table *t)
         if (!t->seats[i].occupied)
             continue;
 
-        t->seats[i].in_round = true;
         t->seats[i].auto_showcards = false;
         t->seats[i].manual_showcards = false;
         t->seats[i].bet = 0;
 
 
         Player *p = t->seats[i].player;
+		if (p->getStake() >= blind.amount) {
+            t->seats[i].in_round = true;
+        }
+
 
         p->holecards.clear();
         p->resetLastAction();
@@ -775,7 +778,7 @@ void GameController::stateBettingEnd(Table *t)
     //reset player's timeout
     for (unsigned int i = 0; i < 10; i++)
     {
-        if (!t->seats[i].occupied)
+        if (!(t->seats[i].occupied && t->seats[i].in_round))
             continue;
 
         Player *p = t->seats[i].player;

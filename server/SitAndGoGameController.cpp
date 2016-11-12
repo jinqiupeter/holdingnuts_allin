@@ -199,8 +199,14 @@ bool SitAndGoGameController::arrangeSeat(int cid)
 bool SitAndGoGameController::addPlayer(int cid, const std::string &uuid, chips_type player_stake)
 {
 	// is the game full?
-	if (players.size() == max_players)
-		return false;
+    if (tables.size() > 0) {
+        //already have some players
+        tables_type::iterator e = tables.begin();
+        Table *t = e->second;
+        if (t && t->countActivePlayers() == max_players) {
+            return false;
+        }
+    }
 	
 	// is the client already a player?
 	if (isPlayer(cid)) {
@@ -267,6 +273,13 @@ bool SitAndGoGameController::resumePlayer(int cid)
 	
 	if (!p)
 		return false;
+
+	// is the game full?
+	tables_type::iterator e = tables.begin();
+	Table *t = e->second;
+    if (t && t->countActivePlayers() == max_players) {
+        return false;
+    }
 	
     log_msg("game ", "arranging seat for player %d", cid);
     if (!arrangeSeat(cid)) {
@@ -276,8 +289,6 @@ bool SitAndGoGameController::resumePlayer(int cid)
 
     p->wanna_leave = false;
 
-	tables_type::iterator e = tables.begin();
-	Table *t = e->second;
 
     // send player's holecards if table state > Pre-flop
     if (t->state > Table::Blinds && t->seats[p->getSeatNo()].in_round) {
@@ -374,7 +385,7 @@ void SitAndGoGameController::handleAnte(Table *t)
 		ante_amount = ante;//blind.amount / 10 * ante;
 		for (unsigned int i = 0; i < 10; ++i)
 		{
-			if (!t->seats[i].occupied)
+			if (!(t->seats[i].occupied && t->seats[i].in_round))
 				continue;
 
 			Player *p = t->seats[i].player;
@@ -856,7 +867,7 @@ void SitAndGoGameController::stateEndRound(Table *t)
     // find broken players
     for (unsigned int i=0; i < 10; i++)
     {
-        if (!t->seats[i].occupied)
+        if (!(t->seats[i].occupied && t->seats[i].in_round))
             continue;
 
         Player *p = t->seats[i].player;
