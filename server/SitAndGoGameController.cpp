@@ -274,13 +274,6 @@ bool SitAndGoGameController::resumePlayer(int cid)
 	if (!p)
 		return false;
 
-	// is the game full?
-	tables_type::iterator e = tables.begin();
-	Table *t = e->second;
-    if (t && t->countActivePlayers() == max_players) {
-        return false;
-    }
-	
     log_msg("game ", "arranging seat for player %d", cid);
     if (!arrangeSeat(cid)) {
         log_msg("game ", "failed to arrange seat for player %d", cid);
@@ -290,8 +283,16 @@ bool SitAndGoGameController::resumePlayer(int cid)
     p->wanna_leave = false;
 
 
+	tables_type::iterator e = tables.begin();
+	if (e == tables.end())
+	{
+		log_msg("arrangeSeat", "no table found");
+		return false;
+	}
+	Table *t = e->second;
     // send player's holecards if table state > Pre-flop
     if (t->state > Table::Blinds && t->seats[p->getSeatNo()].in_round) {
+        log_msg("game ", "sending table snap and hole cards to  %d", cid);
         sendTableSnapshot(t);
 
         vector<Card> cards;
