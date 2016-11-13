@@ -83,7 +83,9 @@ public:
 		std::vector<Card> buy_cards;
 		// Ω·À„ø€«Æ
 		chips_type res_amount;
-	}InsuranceInfo;
+        std::vector<chips_type> buy_pots;
+        std::vector<chips_type> pots_investment;
+    }InsuranceInfo;
 	
 	Player();
 	

@@ -1324,7 +1324,10 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                             {
                                 p->insuraceInfo[round].max_payment += t->pots[i].amount / winers.size();// - p->insuraceInfo[0].buy_amount;
                             }
-
+                            // 记录pot
+                            p->insuraceInfo[round].buy_pots.push_back(t->pots[i].amount);
+                            // 记录投入金额
+                            p->insuraceInfo[round].pots_investment.push_back(t->pots[i].amount / t->pots[i].vseats.size());
                             log_msg("Insurance", "round=%d, pot[%d]=%d, winners=%d, max_payment=%d",round, i, t->pots[i].amount, winers.size(), p->insuraceInfo[round].max_payment);
 							ret = true;
 						}
@@ -1416,13 +1419,38 @@ bool SitAndGoGameController::handleBuyInsurance(Table *t, unsigned int round)
                     }
                 }
 
+                std::string smsg_pots;
+              
+                char spots[20];
+                for (size_t j = 0; j < p->insuraceInfo[round].buy_pots.size(); ++j)
+                {
+                    if (j == 0)
+                        snprintf(spots, sizeof(spots), "%d", p->insuraceInfo[round].buy_pots[j]);
+                    else
+                        snprintf(spots, sizeof(spots), ":%d", p->insuraceInfo[round].buy_pots[j]);
+                    smsg_pots += spots;
+                }
+                
+                std::string smsg_investment;
+		
+                char sinvest[20];
+                for (size_t j = 0; j < p->insuraceInfo[round].pots_investment.size(); ++j)
+                {
+                    if (j == 0)
+                        snprintf(sinvest, sizeof(sinvest), "%d", p->insuraceInfo[round].pots_investment[j]);
+                    else
+                        snprintf(sinvest, sizeof(sinvest), ":%d", p->insuraceInfo[round].pots_investment[j]);
+                    smsg_investment += sinvest;
+                }
 
-				snprintf(msg, sizeof(msg), "%d %d %s %s %s",
+                snprintf(msg, sizeof(msg), "%d %d %s %s %s %s %s",
 					p->insuraceInfo[round].max_payment, 
                     min_buy,
                     smsg_outs.c_str(),
                     smsg_divide_outs.c_str(),
-					smsg_others.c_str());
+					smsg_others.c_str(),
+                    smsg_pots.c_str(),
+                    smsg_investment.c_str());
 
  				snap(p->client_id, t->table_id, SnapBuyInsurance, msg);
 			    log_msg("Insurance", "cid=%d, tid=%d, %s",p->client_id, t->table_id, msg);

@@ -53,6 +53,8 @@ void Player::clearInsuranceInfo()
         insuraceInfo[i].outs_divided.clear();
         insuraceInfo[i].every_single_outs.clear();
         insuraceInfo[i].res_amount = 0;
+        insuraceInfo[i].buy_pots.clear();
+        insuraceInfo[i].pots_investment.clear();
     }
     log_msg("player", "%d clear insurance info", seat_no);
 }
